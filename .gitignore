@@ -1,0 +1,27 @@
+# Binaries and build output
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+tmp/
+
+# Go test and coverage
+*.test
+*.out
+coverage.html
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Editor and OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Vendor
+vendor/
