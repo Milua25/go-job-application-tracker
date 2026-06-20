@@ -1,14 +1,14 @@
 package user
 
 import (
-	"net/http"
-
+	"github.com/Milua25/go-job-application-tracker/internal/render"
 	"github.com/gin-gonic/gin"
 )
 
 func GetUser(c *gin.Context) {
 
-	c.JSON(http.StatusOK, gin.H{
+	render.OK(c, gin.H{
 		"message": "get user",
+		// "csrf":    csrfToken,
 	})
 }

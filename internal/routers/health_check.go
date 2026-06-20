@@ -6,6 +6,6 @@ import (
 )
 
 func registerHealthCheckRoutes(router *gin.RouterGroup) {
-	healthGroup := router.Group("/health")
-	healthGroup.GET("/", (&healthcheck.HealthCheckHandler{}).CheckHealth)
+	healthGroup := router.Group("/")
+	healthGroup.GET("/health", (&healthcheck.HealthCheckHandler{}).CheckHealth)
 }

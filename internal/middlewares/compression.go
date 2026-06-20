@@ -31,11 +31,31 @@ func Compression() gin.HandlerFunc {
 	// }
 }
 
-type gzipResponseWriter struct {
-	gin.ResponseWriter
-	Writer *gzip.Writer
-}
+// func compression() gin.HandlerFunc {
+// 	return func(c *gin.Context) {
+// 		// check if the client supports gzip encoding
+// 		// fix
+// 		if !strings.Contains(c.Request.Header.Get("Accept-Encoding"), "gzip") {
+// 			c.Next()
+// 			return
+// 		}
 
-func (w *gzipResponseWriter) Write(data []byte) (int, error) {
-	return w.Writer.Write(data)
-}
+// 		gz := gzip.NewWriter(c.Writer)
+// 		defer gz.Close()
+
+// 		w := &gzipResponseWriter{ResponseWriter: c.Writer, Writer: gz}
+// 		c.Writer = w
+// 		c.Header("Content-Encoding", "gzip")
+
+// 		c.Next()
+// 	}
+// }
+
+// type gzipResponseWriter struct {
+// 	gin.ResponseWriter
+// 	Writer *gzip.Writer
+// }
+
+// func (w *gzipResponseWriter) Write(data []byte) (int, error) {
+// 	return w.Writer.Write(data)
+// }

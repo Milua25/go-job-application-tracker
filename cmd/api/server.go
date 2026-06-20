@@ -16,16 +16,25 @@ func main() {
 	// Logger middleware will write the logs to gin.DefaultWriter even if you set with GIN_MODE=release.
 	// By default gin.DefaultWriter = os.Stdout
 	// recover from any panics and writes a 500 if there was one.
+	hppOptions := middlewares.HPPOptions{
+		CheckBody:        true,
+		CheckQuery:       true,
+		CheckContentType: "application/x-www-form-urlencoded",
+		Whitelist:        []string{"tags", "categories"},
+	}
+
 	allowedMiddlewares := []gin.HandlerFunc{
 		gin.Logger(),
 		gin.Recovery(),
 		middlewares.RequireOrigin(),
 		middlewares.Cors(),
-		middlewares.ResponseTime(),
+		//middlewares.ResponseTime(),
 		middlewares.SecurityHeaders(),
 		middlewares.SessionCSRFProtection(),
 		middlewares.CSRFProtection(),
+		middlewares.CSRFTokenHeader(),
 		middlewares.Compression(),
+		hppOptions.Hpp(),
 		middlewares.NewRateLimiter(10).Limit(),
 	}
 
