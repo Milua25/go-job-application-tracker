@@ -68,7 +68,7 @@ func (rl *RateLimiter) Limit() gin.HandlerFunc {
 		rl.mu.Unlock() // Unlock before checking the limiter
 
 		if !limiter.Allow() {
-			render.JSONError(c, http.StatusTooManyRequests, "rate limit exceeded")
+			render.JSONError(c, http.StatusTooManyRequests, "RATE_LIMIT_EXCEEDED", "rate limit exceeded")
 			return
 		}
 

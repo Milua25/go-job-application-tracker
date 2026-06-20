@@ -4,9 +4,8 @@ package user
 
 import "context"
 
-// Repository defines what the user package needs from a database.
-// Notice we accept and return PURE domain entities (User), not DB-specific models.
-type Repository interface {
+// UserRepository defines what the user package needs from a database.
+type UserRepository interface {
 	GetByID(ctx context.Context, id string) (*User, error)
 	Create(ctx context.Context, u *User) error
 }

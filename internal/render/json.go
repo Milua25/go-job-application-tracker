@@ -14,8 +14,7 @@ type Response struct {
 }
 
 type ErrorInfo struct {
-	Status int `json:"-"`
-	// Code    string `json:"code"`
+	Code    string `json:"code"`
 	Message string `json:"message"`
 }
 
@@ -26,6 +25,7 @@ type ErrorInfo struct {
 //		TotalPages int `json:"total_pages,omitempty"`
 //	}
 //
+
 // OK sends a success response.
 func OK(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, Response{
@@ -35,9 +35,17 @@ func OK(c *gin.Context, data interface{}) {
 }
 
 // JSONError sends an error response.
-func JSONError(c *gin.Context, status int, message string) {
+func JSONError(c *gin.Context, status int, code, message string) {
 	c.JSON(status, Response{
 		Success: false,
-		Error:   &ErrorInfo{Status: status, Message: message},
+		Error:   &ErrorInfo{Code: code, Message: message},
+	})
+}
+
+// Fail sends a non-2xx response that still carries structured data (e.g. health checks).
+func Fail(c *gin.Context, status int, data interface{}) {
+	c.JSON(status, Response{
+		Success: false,
+		Data:    data,
 	})
 }

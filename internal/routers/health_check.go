@@ -8,4 +8,5 @@ import (
 func registerHealthCheckRoutes(router *gin.RouterGroup) {
 	healthGroup := router.Group("/")
 	healthGroup.GET("/health", (&healthcheck.HealthCheckHandler{}).CheckHealth)
+	healthGroup.GET("/ping", healthcheck.Ping)
 }

@@ -1,3 +1,3 @@
-package models
+package reminder
 
 type Reminder struct{}

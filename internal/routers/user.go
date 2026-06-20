@@ -15,6 +15,6 @@ func registerUserRoutes(router *gin.RouterGroup) {
 
 	// User routes
 	userGroup := router.Group("/")
-	userGroup.GET("/users", user.GetUser)
-
+	userGroup.GET("/users", user.GetAllUsers)
+	userGroup.GET("/users/:id", user.GetUserByID)
 }

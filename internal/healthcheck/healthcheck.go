@@ -5,8 +5,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Milua25/go-job-application-tracker/internal/render"
 	"github.com/gin-gonic/gin"
 )
+
 
 // HealthCheckHandler handles health check requests.
 type HealthCheckHandler struct {
@@ -38,25 +40,19 @@ func (*HealthCheckHandler) CheckHealth(c *gin.Context) {
 	// } else {
 	// 	checks["database"] = "healthy"
 	// }
-	if db_healthy && redis_healthy {
-		health := HealthCheckResponse{
-			Status: "healthy",
-			Checks: gin.H{
-				"database": dbStatus,
-				"redis":    redisStatus,
-			},
-		}
-		// Send a 200 OK response with the health status
-		c.JSON(http.StatusOK, health)
-		return
-	}
-
 	health := HealthCheckResponse{
-		Status: "unhealthy",
 		Checks: gin.H{
 			"database": dbStatus,
 			"redis":    redisStatus,
 		},
 	}
-	c.JSON(http.StatusServiceUnavailable, health)
+
+	if db_healthy && redis_healthy {
+		health.Status = "healthy"
+		render.OK(c, health)
+		return
+	}
+
+	health.Status = "unhealthy"
+	render.Fail(c, http.StatusServiceUnavailable, health)
 }
