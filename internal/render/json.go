@@ -6,50 +6,30 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Response struct {
-	Success bool        `json:"success"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   *ErrorInfo  `json:"error,omitempty"`
-	// Meta    *Meta       `json:"meta,omitempty"`
+// Document is the JSON:API top-level document.
+// Exactly one of Data or Meta must be set per the spec.
+type Document struct {
+	Data  interface{} `json:"data,omitempty"`
+	Meta  interface{} `json:"meta,omitempty"`
+	Links interface{} `json:"links,omitempty"`
 }
 
-type ErrorInfo struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-}
-
-//	type Meta struct {
-//		Page       int `json:"page,omitempty"`
-//		PerPage    int `json:"per_page,omitempty"`
-//		Total      int `json:"total,omitempty"`
-//		TotalPages int `json:"total_pages,omitempty"`
-//	}
-//
-
-// OK sends a success response.
+// OK sends a 200 response with primary data.
 func OK(c *gin.Context, data interface{}) {
-	c.JSON(http.StatusOK, Response{
-		Success: true,
-		Data:    data,
-	})
+	c.JSON(http.StatusOK, Document{Data: data})
 }
 
+// OKMeta sends a 200 response with only a meta object (no primary data).
+func OKMeta(c *gin.Context, meta interface{}) {
+	c.JSON(http.StatusOK, Document{Meta: meta})
+}
+
+// NoContent sends a 204 with no body.
 func NoContent(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// JSONError sends an error response.
-func JSONError(c *gin.Context, status int, code, message string) {
-	c.JSON(status, Response{
-		Success: false,
-		Error:   &ErrorInfo{Code: code, Message: message},
-	})
-}
-
 // Fail sends a non-2xx response that still carries structured data (e.g. health checks).
 func Fail(c *gin.Context, status int, data interface{}) {
-	c.JSON(status, Response{
-		Success: false,
-		Data:    data,
-	})
+	c.JSON(status, Document{Data: data})
 }

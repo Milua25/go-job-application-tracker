@@ -10,15 +10,22 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	migratepg "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	_ "github.com/lib/pq"
 )
 
 //go:embed migrations/*.sql
 var fs embed.FS
 
-func applyDBMigrations(db *sql.DB) error {
+func applyDBMigrations(dsn string) error {
 	slog.Info("applying database migrations")
 
-	driver, err := migratepg.WithInstance(db, &migratepg.Config{})
+	// Dedicated connection for migrations — m.Close() will close this, not the app's pool.
+	migrationDB, err := sql.Open("postgres", dsn)
+	if err != nil {
+		return fmt.Errorf("failed to open migration database connection: %w", err)
+	}
+
+	driver, err := migratepg.WithInstance(migrationDB, &migratepg.Config{})
 	if err != nil {
 		return fmt.Errorf("failed to create postgres driver: %w", err)
 	}

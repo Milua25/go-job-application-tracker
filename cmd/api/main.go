@@ -37,9 +37,9 @@ func main() {
 		middleware.RequireOrigin(),
 		middleware.Cors(),
 		middleware.SecurityHeaders(),
-		middleware.SessionCSRFProtection(cfg.Security.SessionSecret),
-		middleware.CSRFProtection(cfg.Security.CSRFSecret),
-		middleware.CSRFTokenHeader(),
+		// middleware.SessionCSRFProtection(cfg.Security.SessionSecret),
+		// middleware.CSRFProtection(cfg.Security.CSRFSecret),
+		// middleware.CSRFTokenHeader(),
 		middleware.Compression(),
 		hppOptions.Hpp(),
 		middleware.NewRateLimiter(10).Limit(),
@@ -60,7 +60,7 @@ func main() {
 	sqlDB.SetConnMaxLifetime(time.Duration(cfg.DB.ConnMaxLifetime) * time.Second)
 	sqlDB.SetConnMaxIdleTime(time.Duration(cfg.DB.DefaultTimeoutDuration) * time.Second)
 
-	if err := applyDBMigrations(sqlDB); err != nil {
+	if err := applyDBMigrations(cfg.DB.URL()); err != nil {
 		slog.Error("Failed to apply database migrations", "error", err)
 		return
 	}
@@ -77,5 +77,9 @@ func main() {
 
 	if err := app.run(); err != nil {
 		slog.Error("Failed to run the app", "error", err)
+	}
+
+	if err := sqlDB.Close(); err != nil {
+		slog.Error("Failed to close database connection", "error", err)
 	}
 }

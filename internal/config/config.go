@@ -78,13 +78,13 @@ func (d DbConfig) DSN() string {
 	)
 }
 
-// // URL returns the postgres:// connection URL required by golang-migrate.
-// func (d DbConfig) URL() string {
-// 	return fmt.Sprintf(
-// 		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-// 		d.User, d.Password, d.Host, d.Port, d.Name,
-// 	)
-// }
+// URL returns the postgres:// connection URL used by golang-migrate.
+func (d DbConfig) URL() string {
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		d.User, d.Password, d.Host, d.Port, d.Name,
+	)
+}
 
 func LoadConfig() (*Config, error) {
 	err := godotenv.Load()

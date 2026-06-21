@@ -3,6 +3,7 @@ package healthcheck
 import (
 	"context"
 	"database/sql"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -14,12 +15,6 @@ type HealthCheckHandler struct {
 	db *sql.DB
 }
 
-// type HealthCheckHandler struct {
-// 	db *sql.DB
-// }
-
-//	func NewHealthCheckHandler(db *sql.DB) *HealthCheckHandler {
-//		return &HealthCheckHandler{db: db}
 func NewHealthCheckHandler(db *sql.DB) *HealthCheckHandler {
 	return &HealthCheckHandler{db: db}
 }
@@ -28,25 +23,30 @@ func (h *HealthCheckHandler) CheckHealth(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	dbHealthy := h.db.PingContext(ctx) == nil
-
-	dbStatus := "down"
-	if dbHealthy {
-		dbStatus = "up"
+	dbStatus := "up"
+	if err := h.db.PingContext(ctx); err != nil {
+		slog.Error("database health check failed", "error", err)
+		dbStatus = "down"
 	}
 
 	health := HealthCheckResponse{
+		Status: func() string {
+			if dbStatus == "up" {
+				return "healthy"
+			}
+			return "unhealthy"
+		}(),
 		Checks: gin.H{"database": dbStatus},
 	}
 
-	if dbHealthy {
-		health.Status = "healthy"
-		render.OK(c, health)
+	slog.Info("health check result", "status", health.Status)
+
+	if dbStatus == "down" {
+		render.Fail(c, http.StatusServiceUnavailable, health)
 		return
 	}
 
-	health.Status = "unhealthy"
-	render.Fail(c, http.StatusServiceUnavailable, health)
+	render.OK(c, health)
 }
 
 func (h *HealthCheckHandler) Ping(c *gin.Context) {

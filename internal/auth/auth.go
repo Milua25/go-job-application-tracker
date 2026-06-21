@@ -27,7 +27,7 @@ func (h *AuthHandler) RegisterUser(c *gin.Context) {
 	// parse request body into User struct
 	var newUser RegisterRequest
 	if err := c.ShouldBindJSON(&newUser); err != nil {
-		render.BadRequestError(c, "invalid request body", err)
+		render.ValidationError(c, err)
 		return
 	}
 	// check if user with the same email already exists

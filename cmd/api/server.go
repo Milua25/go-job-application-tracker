@@ -15,10 +15,10 @@ import (
 	"github.com/Milua25/go-job-application-tracker/internal/auth"
 	"github.com/Milua25/go-job-application-tracker/internal/config"
 	"github.com/Milua25/go-job-application-tracker/internal/healthcheck"
+	tokens "github.com/Milua25/go-job-application-tracker/internal/jwt"
 	"github.com/Milua25/go-job-application-tracker/internal/middleware"
 	"github.com/Milua25/go-job-application-tracker/internal/repository/sqlconnect"
 	"github.com/Milua25/go-job-application-tracker/internal/routers"
-	"github.com/Milua25/go-job-application-tracker/internal/tokens"
 	"github.com/Milua25/go-job-application-tracker/internal/user"
 	"github.com/gin-gonic/gin"
 )

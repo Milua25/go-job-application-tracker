@@ -45,38 +45,32 @@ func AuthMiddleware(authService TokenValidator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if authService == nil {
 			render.InternalServerError(c, "auth service is not initialized", ErrNilAuthService)
-			c.Abort()
 			return
 		}
 
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			render.UnAuthorizedResponseError(c, "authorization header is missing", ErrNoAuthorizationHeader)
-			c.Abort()
 			return
 		}
 		const bearerPrefix = "Bearer "
 		if !strings.HasPrefix(authHeader, bearerPrefix) {
 			render.UnAuthorizedResponseError(c, "authorization header format must be 'Bearer <token>'", ErrInvalidAuthorizationHeaderFormat)
-			c.Abort()
 			return
 		}
 
 		tokenString := authHeader[len(bearerPrefix):]
 		if tokenString == "" {
 			render.UnAuthorizedResponseError(c, "token is missing", ErrAuthTokenEmpty)
-			c.Abort()
 			return
 		}
 		claims, err := authService.ValidateToken(tokenString)
 		if err != nil {
 			if errors.Is(err, ErrTokenExpired) {
 				render.UnAuthorizedResponseError(c, "token has expired", ErrTokenExpired)
-				c.Abort()
 				return
 			}
 			render.UnAuthorizedResponseError(c, "invalid token", err)
-			c.Abort()
 			return
 		}
 

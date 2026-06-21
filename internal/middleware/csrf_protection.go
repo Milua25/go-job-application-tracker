@@ -16,6 +16,7 @@ func CSRFProtection(secret string) gin.HandlerFunc {
 		Secret: secret,
 		ErrorFunc: func(ctx *gin.Context) {
 			render.JSONError(ctx, http.StatusBadRequest, "CSRF_TOKEN_MISMATCH", "CSRF token mismatch")
+			ctx.Abort()
 		},
 	})
 }

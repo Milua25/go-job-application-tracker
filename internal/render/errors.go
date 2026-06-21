@@ -4,8 +4,46 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/Milua25/go-job-application-tracker/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
+
+type errorObject struct {
+	Status string `json:"status"`
+	Code   string `json:"code"`
+	Detail string `json:"detail"`
+}
+
+type errorsDocument struct {
+	Errors []errorObject `json:"errors"`
+}
+
+// JSONError sends an error response following the JSON:API errors document structure
+// and aborts the handler chain.
+func JSONError(c *gin.Context, status int, code, detail string) {
+	c.AbortWithStatusJSON(status, errorsDocument{
+		Errors: []errorObject{{
+			Status: http.StatusText(status),
+			Code:   code,
+			Detail: detail,
+		}},
+	})
+}
+
+// ValidationError extracts field-level validation errors and sends a 422 response
+// with one error object per failing field.
+func ValidationError(c *gin.Context, err error) {
+	fieldErrors := utils.ExtractValidationErrors(err)
+	errs := make([]errorObject, len(fieldErrors))
+	for i, fe := range fieldErrors {
+		errs[i] = errorObject{
+			Status: http.StatusText(http.StatusUnprocessableEntity),
+			Code:   "VALIDATION_ERROR",
+			Detail: fe.Message,
+		}
+	}
+	c.AbortWithStatusJSON(http.StatusUnprocessableEntity, errorsDocument{Errors: errs})
+}
 
 // internalServerError logs and sends a 500 response.
 func InternalServerError(c *gin.Context, msg string, err error) {

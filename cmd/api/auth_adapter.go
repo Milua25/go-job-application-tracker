@@ -3,8 +3,8 @@ package main
 import (
 	"errors"
 
+	tokens "github.com/Milua25/go-job-application-tracker/internal/jwt"
 	"github.com/Milua25/go-job-application-tracker/internal/middleware"
-	"github.com/Milua25/go-job-application-tracker/internal/tokens"
 )
 
 // jwtAuthAdapter satisfies middleware.TokenValidator using tokens.AuthService.
