@@ -1,4 +1,4 @@
-package tokens
+package auth
 
 import (
 	"errors"
@@ -33,9 +33,13 @@ var (
 	ErrIncorrectSigningMethod = errors.New("incorrect signing method")
 )
 
-// NewAuthService creates a new instance of AuthService with the provided secret key and issuer.
-func NewAuthService(secretKey, issuer, expireIn, refreshExpireIn string) *AuthService {
-	return &AuthService{secretKey: secretKey, issuer: issuer, expireIn: expireIn, refreshExpireIn: refreshExpireIn}
+func newAuthService(secretKey, issuer, expireIn, refreshExpireIn string) *AuthService {
+	return &AuthService{
+		secretKey:       secretKey,
+		issuer:          issuer,
+		expireIn:        expireIn,
+		refreshExpireIn: refreshExpireIn,
+	}
 }
 
 // GenerateToken generates a JWT token with the provided user information and expiration times.
@@ -92,29 +96,38 @@ func (s *AuthService) GenerateToken(firstName, lastName, email, uid string) (str
 
 }
 
-// ValidateToken validates the provided JWT token and returns the claims if valid.
+// ValidateToken validates an access token and returns the claims if valid.
 func (s *AuthService) ValidateToken(signedToken string) (*Claims, error) {
 	if signedToken == "" {
 		return nil, ErrTokenEmpty
 	}
-	// check if the service is properly initialized
-	if s == nil || s.secretKey == "" || s.issuer == "" {
+	// Guard against an empty secret or issuer set at construction time.
+	if s.secretKey == "" || s.issuer == "" {
 		return nil, fmt.Errorf("auth service is not properly initialized")
 	}
 
-	// Validate the token and return the claims
-	return validateToken(signedToken, s.secretKey, s.issuer)
+	return validateToken(signedToken, s.secretKey, s.issuer, "access")
 }
 
-// validateToken is a helper function that validates the JWT token and returns the claims if valid.
-func validateToken(signedToken, secretkey, issuer string) (*Claims, error) {
-	// Parse the token with the claims and validation options
+// ValidateRefreshToken validates a refresh token and returns the claims if valid.
+func (s *AuthService) ValidateRefreshToken(signedToken string) (*Claims, error) {
+	if signedToken == "" {
+		return nil, ErrTokenEmpty
+	}
+	if s.secretKey == "" || s.issuer == "" {
+		return nil, fmt.Errorf("auth service is not properly initialized")
+	}
+
+	return validateToken(signedToken, s.secretKey, s.issuer, "refresh")
+}
+
+func validateToken(signedToken, secretkey, issuer, audience string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(signedToken, &Claims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, ErrIncorrectSigningMethod
 		}
 		return []byte(secretkey), nil
-	}, jwt.WithIssuer(issuer), jwt.WithAudience("access"), jwt.WithExpirationRequired(), jwt.WithIssuedAt())
+	}, jwt.WithIssuer(issuer), jwt.WithAudience(audience), jwt.WithExpirationRequired(), jwt.WithIssuedAt())
 
 	if token == nil {
 		return nil, ErrInvalidToken

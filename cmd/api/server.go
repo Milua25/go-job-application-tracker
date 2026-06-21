@@ -15,7 +15,6 @@ import (
 	"github.com/Milua25/go-job-application-tracker/internal/auth"
 	"github.com/Milua25/go-job-application-tracker/internal/config"
 	"github.com/Milua25/go-job-application-tracker/internal/healthcheck"
-	tokens "github.com/Milua25/go-job-application-tracker/internal/jwt"
 	"github.com/Milua25/go-job-application-tracker/internal/middleware"
 	"github.com/Milua25/go-job-application-tracker/internal/repository/sqlconnect"
 	"github.com/Milua25/go-job-application-tracker/internal/routers"
@@ -31,11 +30,9 @@ type app struct {
 }
 
 func (a *app) run() error {
-	authService := tokens.NewAuthService(a.cfg.JWT.SecretKey, a.cfg.JWT.Issuer, a.cfg.JWT.ExpiresIn, a.cfg.JWT.RefreshExpiresIn)
-
 	userHandler := user.NewUserHandler(a.pgStore.User)
 	healthcheckHandler := healthcheck.NewHealthCheckHandler(a.sqlDB)
-	authHandler := auth.NewAuthHandler(a.pgStore.User, authService)
+	authHandler := auth.NewAuthHandler(a.pgStore.User, a.cfg.JWT.SecretKey, a.cfg.JWT.Issuer, a.cfg.JWT.ExpiresIn, a.cfg.JWT.RefreshExpiresIn)
 
 	router := gin.New()
 	router.Use(a.middleware...)
@@ -44,7 +41,7 @@ func (a *app) run() error {
 		User:           userHandler,
 		HealthCheck:    healthcheckHandler,
 		Auth:           authHandler,
-		AuthMiddleware: middleware.AuthMiddleware(newJWTAuthAdapter(authService)),
+		AuthMiddleware: middleware.AuthMiddleware(newJWTAuthAdapter(authHandler.Service())),
 	})
 
 	addr := fmt.Sprintf("%s:%s", a.cfg.Server.Addr, a.cfg.Server.Port)

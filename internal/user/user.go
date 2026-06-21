@@ -19,6 +19,7 @@ type User struct {
 	RefreshToken    *string    `db:"refresh_token"`
 	IsAdmin         bool       `db:"is_admin,default:false"`
 	CreatedAt       time.Time  `db:"created_at"`
+	LastLoginAt     *time.Time `db:"last_login_at"`
 	UpdatedAt       time.Time  `db:"updated_at"`
 	DeletedAt       *time.Time `db:"deleted_at"`
 }

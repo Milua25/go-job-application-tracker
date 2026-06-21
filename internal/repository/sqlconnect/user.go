@@ -24,5 +24,11 @@ func (s *UserStore) Create(ctx context.Context, u *user.User) error {
 }
 
 func (s *UserStore) GetByEmail(ctx context.Context, email string) (*user.User, error) {
+	// 	  if err != nil {
+	//     return nil, err
+	// }
+	// if lastLogin.Valid {
+	//     user.LastLogin = &lastLogin.Time
+	// }
 	return nil, nil
 }

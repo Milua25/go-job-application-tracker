@@ -36,7 +36,7 @@ var (
 
 // TokenValidator is the only contract AuthMiddleware depends on.
 // Concrete implementations live in cmd/api so neither this package
-// nor the token package imports the other.
+// nor the auth package imports the other.
 type TokenValidator interface {
 	ValidateToken(token string) (*Claims, error)
 }
