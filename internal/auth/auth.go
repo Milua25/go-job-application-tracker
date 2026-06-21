@@ -64,23 +64,15 @@ func (h *AuthHandler) RegisterUser(c *gin.Context) {
 		return
 	}
 
-	// token generation logic would go here (e.g., JWT token creation)
-	token, refreshToken, err := h.authService.GenerateToken(createdUser.FirstName, createdUser.LastName, createdUser.Email, createdUser.ID.String())
-	if err != nil {
-		render.InternalServerError(c, "failed to generate token", err)
-		return
-	}
 	//return user created response
 	response := RegisterResponse{
-		ID:           createdUser.ID.String(),
-		FirstName:    createdUser.FirstName,
-		LastName:     createdUser.LastName,
-		Email:        createdUser.Email,
-		Token:        token,
-		RefreshToken: refreshToken,
-		IsActive:     createdUser.IsActive,
-		CreatedAt:    createdUser.CreatedAt,
-		UpdatedAt:    createdUser.UpdatedAt,
+		ID:        createdUser.ID.String(),
+		FirstName: createdUser.FirstName,
+		LastName:  createdUser.LastName,
+		Email:     createdUser.Email,
+		IsActive:  createdUser.IsActive,
+		CreatedAt: createdUser.CreatedAt,
+		UpdatedAt: createdUser.UpdatedAt,
 	}
 
 	render.OK(c, gin.H{
@@ -108,7 +100,7 @@ func (h *AuthHandler) LoginUser(c *gin.Context) {
 	}
 
 	// token generation logic would go here (e.g., JWT token creation)
-	token, refreshToken, err := h.authService.GenerateToken(user.FirstName, user.LastName, user.Email, user.ID.String())
+	token, refreshToken, err := h.authService.GenerateToken(user)
 	if err != nil {
 		render.InternalServerError(c, "failed to generate token", err)
 		return

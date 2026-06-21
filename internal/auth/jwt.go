@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Milua25/go-job-application-tracker/internal/user"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -43,7 +45,7 @@ func newAuthService(secretKey, issuer, expireIn, refreshExpireIn string) *AuthSe
 }
 
 // GenerateToken generates a JWT token with the provided user information and expiration times.
-func (s *AuthService) GenerateToken(firstName, lastName, email, uid string) (string, string, error) {
+func (s *AuthService) GenerateToken(user *user.User) (string, string, error) {
 	expireDuration, err := time.ParseDuration(s.expireIn)
 	if err != nil {
 		return "", "", err
@@ -55,10 +57,10 @@ func (s *AuthService) GenerateToken(firstName, lastName, email, uid string) (str
 	}
 	now := time.Now()
 	tokenClaims := Claims{
-		Email:     email,
-		FirstName: firstName,
-		LastName:  lastName,
-		Uid:       uid,
+		Email:     user.Email,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Uid:       user.ID.String(),
 		RegisteredClaims: jwt.RegisteredClaims{
 			Audience:  jwt.ClaimStrings{"access"},
 			ExpiresAt: jwt.NewNumericDate(now.Add(expireDuration)),
@@ -68,7 +70,7 @@ func (s *AuthService) GenerateToken(firstName, lastName, email, uid string) (str
 	}
 
 	refreshTokenClaims := Claims{
-		Uid: uid,
+		Uid: user.ID.String(),
 		RegisteredClaims: jwt.RegisteredClaims{
 			Audience:  jwt.ClaimStrings{"refresh"},
 			ExpiresAt: jwt.NewNumericDate(now.Add(refreshExpireDuration)),
