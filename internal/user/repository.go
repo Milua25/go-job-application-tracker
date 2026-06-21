@@ -1,11 +1,10 @@
 package user
 
-// 👈 Defines the INTERFACE
-
 import "context"
 
-// UserRepository defines what the user package needs from a database.
-type UserRepository interface {
+type Repository interface {
 	GetByID(ctx context.Context, id string) (*User, error)
+	GetAll(ctx context.Context) ([]*User, error)
 	Create(ctx context.Context, u *User) error
+	GetByEmail(ctx context.Context, email string) (*User, error)
 }

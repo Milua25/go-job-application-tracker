@@ -1,6 +1,5 @@
 package user
 
-// Core Domain Entity
 import (
 	"time"
 
@@ -11,10 +10,13 @@ type User struct {
 	ID              uuid.UUID  `db:"id"`
 	Email           string     `db:"email"`
 	PasswordHash    string     `db:"password_hash"`
-	FullName        string     `db:"full_name"`
+	FirstName       string     `db:"first_name"`
+	LastName        string     `db:"last_name"`
 	Timezone        string     `db:"timezone"`
-	IsActive        bool       `db:"is_active"`
+	IsActive        bool       `db:"is_active,default:true"`
 	EmailVerifiedAt *time.Time `db:"email_verified_at"`
+	Token           *string    `db:"token"`
+	RefreshToken    *string    `db:"refresh_token"`
 	CreatedAt       time.Time  `db:"created_at"`
 	UpdatedAt       time.Time  `db:"updated_at"`
 	DeletedAt       *time.Time `db:"deleted_at"`

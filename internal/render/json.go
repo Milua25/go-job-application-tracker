@@ -34,6 +34,10 @@ func OK(c *gin.Context, data interface{}) {
 	})
 }
 
+func NoContent(c *gin.Context) {
+	c.Status(http.StatusNoContent)
+}
+
 // JSONError sends an error response.
 func JSONError(c *gin.Context, status int, code, message string) {
 	c.JSON(status, Response{

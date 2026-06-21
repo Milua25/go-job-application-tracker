@@ -14,7 +14,8 @@ var users = []User{
 		ID:           uuid.MustParse("6f78a05d-32b8-4b0e-8d5e-62e984a5969f"),
 		Email:        "ayo@example.com",
 		PasswordHash: "hashedpassword",
-		FullName:     "Ayo Johnson",
+		FirstName:    "Ayo",
+		LastName:     "Johnson",
 		Timezone:     "America/New_York",
 		IsActive:     true,
 		CreatedAt:    time.Now(),
@@ -24,7 +25,8 @@ var users = []User{
 		ID:           uuid.MustParse("1dd54345-3f2d-464e-98ab-1a7b982793dc"), // uuid.New(),
 		Email:        "tayo@example.com",
 		PasswordHash: "hashedpassword",
-		FullName:     "Tayo Smith",
+		FirstName:    "Tayo",
+		LastName:     "Smith",
 		Timezone:     "America/Los_Angeles",
 		IsActive:     true,
 		CreatedAt:    time.Now(),
@@ -32,16 +34,27 @@ var users = []User{
 	},
 }
 
-func GetAllUsers(c *gin.Context) {
+type UserHandler struct {
+	store Repository
+}
+
+func NewUserHandler(store Repository) *UserHandler {
+	return &UserHandler{store: store}
+}
+
+func (h *UserHandler) GetAllUsers(c *gin.Context) {
 	list_of_users := users
+
 	// database lookup for all users
+	//	h.store.GetAllUsers()
+
 	render.OK(c, gin.H{
 		"message": "get all users",
 		"users":   list_of_users,
 	})
 }
 
-func GetUserByID(c *gin.Context) {
+func (h *UserHandler) GetUserByID(c *gin.Context) {
 	id := c.Param("id")
 
 	// check the id
@@ -70,4 +83,33 @@ func GetUserByID(c *gin.Context) {
 		"message": "get user by id",
 		"user":    found_user,
 	})
+}
+
+func (h *UserHandler) DeleteUser(c *gin.Context) {
+	id := c.Param("id")
+
+	// check the id
+	if _, err := uuid.Parse(id); err != nil {
+		render.BadRequestError(c, "invalid user id", err)
+		return
+	}
+
+	delete_user := User{}
+
+	// database lookup for user by id and delete
+	for index, user := range users {
+		if user.ID.String() == id {
+			log.Printf("deleting user: %s", user.Email)
+			users = append(users[:index], users[index+1:]...)
+			delete_user = user
+		}
+	}
+
+	// if user not found, return 404
+	if delete_user.ID == uuid.Nil {
+		render.NotFoundError(c, "user not found")
+		return
+	}
+
+	render.NoContent(c)
 }

@@ -5,8 +5,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func registerHealthCheckRoutes(router *gin.RouterGroup) {
+func registerHealthCheckRoutes(router *gin.RouterGroup, h *healthcheck.HealthCheckHandler) {
 	healthGroup := router.Group("/")
-	healthGroup.GET("/health", (&healthcheck.HealthCheckHandler{}).CheckHealth)
-	healthGroup.GET("/ping", healthcheck.Ping)
+	healthGroup.GET("/health", h.CheckHealth)
+	healthGroup.GET("/ping", h.Ping)
 }

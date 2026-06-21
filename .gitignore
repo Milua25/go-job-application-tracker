@@ -25,3 +25,5 @@ coverage.html
 
 # Vendor
 vendor/
+docs/job_tracker.dbml
+notes/txt
