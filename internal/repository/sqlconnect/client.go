@@ -14,7 +14,9 @@ func ConnectToPgDB(dsn string, log *slog.Logger) (*gorm.DB, error) {
 	log.Info("connecting to PostgreSQL database")
 
 	gormConfig := &gorm.Config{
-		PrepareStmt:            true,
+		// Caches prepared statements per-connection for reuse; shows as brief "idle in transaction" in pg_stat_activity on new connections — expected behaviour.
+		PrepareStmt: true,
+		// GORM wraps every write in an implicit transaction by default; disabled because withTx manages transactions explicitly to avoid double-wrapping.
 		SkipDefaultTransaction: true,
 		Logger:                 newSlogGORMLogger(log, logger.Warn, 200*time.Millisecond),
 	}

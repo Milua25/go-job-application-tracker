@@ -60,6 +60,7 @@ func (l *slogGORMLogger) Trace(_ context.Context, begin time.Time, fc func() (st
 	}
 
 	switch {
+	// ErrRecordNotFound is a normal flow return from First/Take; callers handle it, so suppress it here to avoid noise.
 	case err != nil && !errors.Is(err, logger.ErrRecordNotFound):
 		l.log.Error("gorm query error", append(attrs, slog.String("error", err.Error()))...)
 	case l.slowThreshold > 0 && elapsed > l.slowThreshold:

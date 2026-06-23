@@ -21,7 +21,7 @@ func (h *UserHandler) RegisterRoutes(r gin.IRouter, authMiddleware gin.HandlerFu
 	g := r.Group("/users", authMiddleware)
 	g.GET("", h.GetAllUsers)
 	g.GET("/:id", h.GetUserByID)
-	g.PUT("/:id", h.UpdateUser)
+	g.PATCH("/:id", h.UpdateUser)
 	g.DELETE("/:id", h.DeleteUser)
 }
 

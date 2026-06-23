@@ -84,8 +84,8 @@ func (h *authService) loginUser(ctx context.Context, req LoginRequest) (*user.Us
 		return nil, "", "", err
 	}
 
-	// check if the user already has an active session and delete it before creating a new one
-	err = h.sessionStore.DeleteRefreshToken(ctx, foundUser.Email)
+	// delete any existing session before creating a new one to prevent unique constraint violations on refresh_token
+	err = h.sessionStore.DeleteSessionsByEmail(ctx, foundUser.Email)
 	if err != nil && !errors.Is(err, token.ErrNotFound) {
 		slog.Error("failed to delete existing session", "email", foundUser.Email, "error", err)
 		return nil, "", "", ErrFailedToDeleteSession
@@ -160,12 +160,6 @@ func (h *authService) RefreshAccessToken(ctx context.Context, req RefreshTokenRe
 
 	return accessToken, nil
 }
-
-// func (h *AuthService) createRefreshToken(ctx context.Context, req RefreshRequest) (string, error) {
-
-// 	h.sessionStore.
-// 	return "", nil
-// }
 
 func (h *authService) LogoutUser(ctx context.Context, userId string) error {
 	// check if the user exists

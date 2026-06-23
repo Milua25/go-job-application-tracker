@@ -36,6 +36,7 @@ func (a *app) run() error {
 		a.cfg.JWT.ExpiresIn,
 		a.cfg.JWT.RefreshExpiresIn,
 	)
+
 	if err != nil {
 		return fmt.Errorf("invalid JWT config: %w", err)
 	}
