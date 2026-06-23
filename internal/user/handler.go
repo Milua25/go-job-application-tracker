@@ -1,115 +1,127 @@
 package user
 
 import (
-	"log"
-	"time"
+	"errors"
+	"log/slog"
 
 	"github.com/Milua25/go-job-application-tracker/internal/render"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
-var users = []User{
-	{
-		ID:           uuid.MustParse("6f78a05d-32b8-4b0e-8d5e-62e984a5969f"),
-		Email:        "ayo@example.com",
-		PasswordHash: "hashedpassword",
-		FirstName:    "Ayo",
-		LastName:     "Johnson",
-		Timezone:     "America/New_York",
-		IsActive:     true,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
-	},
-	{
-		ID:           uuid.MustParse("1dd54345-3f2d-464e-98ab-1a7b982793dc"), // uuid.New(),
-		Email:        "tayo@example.com",
-		PasswordHash: "hashedpassword",
-		FirstName:    "Tayo",
-		LastName:     "Smith",
-		Timezone:     "America/Los_Angeles",
-		IsActive:     true,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
-	},
-}
-
 type UserHandler struct {
-	store Repository
+	svc *userService
 }
 
 func NewUserHandler(store Repository) *UserHandler {
-	return &UserHandler{store: store}
+	return &UserHandler{svc: newUserService(store)}
+}
+
+func (h *UserHandler) RegisterRoutes(r gin.IRouter, authMiddleware gin.HandlerFunc) {
+	g := r.Group("/users", authMiddleware)
+	g.GET("", h.GetAllUsers)
+	g.GET("/:id", h.GetUserByID)
+	g.PUT("/:id", h.UpdateUser)
+	g.DELETE("/:id", h.DeleteUser)
 }
 
 func (h *UserHandler) GetAllUsers(c *gin.Context) {
-	list_of_users := users
+	slog.Debug("fetching all users")
 
-	// database lookup for all users
-	//	h.store.GetAllUsers()
+	users, err := h.svc.getAll(c.Request.Context())
+	if err != nil {
+		slog.Error("failed to fetch all users", "error", err)
+		render.InternalServerError(c, "failed to get all users", err)
+		return
+	}
 
+	slog.Debug("fetched users successfully", "count", len(users))
 	render.OK(c, gin.H{
 		"message": "get all users",
-		"users":   list_of_users,
+		"users":   toUserResps(users),
 	})
 }
 
 func (h *UserHandler) GetUserByID(c *gin.Context) {
 	id := c.Param("id")
+	slog.Debug("fetching user by id", "user_id", id)
 
-	// check the id
 	if _, err := uuid.Parse(id); err != nil {
 		render.BadRequestError(c, "invalid user id", err)
 		return
 	}
 
-	found_user := User{}
-
-	// database lookup for user by id
-	for _, user := range users {
-		if user.ID.String() == id {
-			log.Printf("found user: %s", user.Email)
-			found_user = user
+	u, err := h.svc.getByID(c.Request.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			render.NotFoundError(c, "user not found")
+			return
 		}
-	}
-	// if user not found, return 404
-	if found_user.ID == uuid.Nil {
-		render.NotFoundError(c, "user not found")
+		slog.Error("failed to fetch user by id", "user_id", id, "error", err)
+		render.InternalServerError(c, "failed to get user by id", err)
 		return
 	}
 
-	// return the found user
 	render.OK(c, gin.H{
 		"message": "get user by id",
-		"user":    found_user,
+		"user":    toUserResp(u),
 	})
 }
 
 func (h *UserHandler) DeleteUser(c *gin.Context) {
 	id := c.Param("id")
+	slog.Debug("deleting user", "user_id", id)
 
-	// check the id
 	if _, err := uuid.Parse(id); err != nil {
 		render.BadRequestError(c, "invalid user id", err)
 		return
 	}
 
-	delete_user := User{}
-
-	// database lookup for user by id and delete
-	for index, user := range users {
-		if user.ID.String() == id {
-			log.Printf("deleting user: %s", user.Email)
-			users = append(users[:index], users[index+1:]...)
-			delete_user = user
+	if err := h.svc.delete(c.Request.Context(), id); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			render.NotFoundError(c, "user not found")
+			return
 		}
-	}
-
-	// if user not found, return 404
-	if delete_user.ID == uuid.Nil {
-		render.NotFoundError(c, "user not found")
+		slog.Error("failed to delete user", "user_id", id, "error", err)
+		render.InternalServerError(c, "failed to delete user", err)
 		return
 	}
 
+	slog.Info("user deleted successfully", "user_id", id)
 	render.NoContent(c)
+}
+
+func (h *UserHandler) UpdateUser(c *gin.Context) {
+	id := c.Param("id")
+
+	if _, err := uuid.Parse(id); err != nil {
+		render.BadRequestError(c, "invalid user id", err)
+		return
+	}
+
+	var req UpdateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		render.ValidationError(c, err)
+		return
+	}
+
+	u, err := h.svc.update(c.Request.Context(), id, req)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrNotFound):
+			render.NotFoundError(c, "user not found")
+		case errors.Is(err, ErrEmailInUse):
+			render.ConflictResponseError(c, "email already in use", err)
+		default:
+			slog.Error("failed to update user", "user_id", id, "error", err)
+			render.InternalServerError(c, "failed to update user", err)
+		}
+		return
+	}
+
+	slog.Info("user updated successfully", "user_id", id)
+	render.OK(c, gin.H{
+		"message": "user updated successfully",
+		"user":    toUserResp(u),
+	})
 }

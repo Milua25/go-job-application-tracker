@@ -18,6 +18,7 @@ import (
 	"github.com/Milua25/go-job-application-tracker/internal/middleware"
 	"github.com/Milua25/go-job-application-tracker/internal/repository/sqlconnect"
 	"github.com/Milua25/go-job-application-tracker/internal/routers"
+	"github.com/Milua25/go-job-application-tracker/internal/token"
 	"github.com/Milua25/go-job-application-tracker/internal/user"
 	"github.com/gin-gonic/gin"
 )
@@ -30,19 +31,24 @@ type app struct {
 }
 
 func (a *app) run() error {
+	tokenMaker, err := token.NewJWTMaker(
+		a.cfg.JWT.SecretKey,
+		a.cfg.JWT.Issuer,
+		a.cfg.JWT.ExpiresIn,
+		a.cfg.JWT.RefreshExpiresIn,
+	)
+	if err != nil {
+		return fmt.Errorf("invalid JWT config: %w", err)
+	}
+
 	userHandler := user.NewUserHandler(a.pgStore.User)
 	healthcheckHandler := healthcheck.NewHealthCheckHandler(a.sqlDB)
-	authHandler := auth.NewAuthHandler(a.pgStore.User, a.cfg.JWT.SecretKey, a.cfg.JWT.Issuer, a.cfg.JWT.ExpiresIn, a.cfg.JWT.RefreshExpiresIn)
+	authHandler := auth.NewAuthHandler(a.pgStore.User, a.pgStore.Session, tokenMaker)
 
 	router := gin.New()
 	router.Use(a.middleware...)
 
-	routers.APIv1Routes(router, routers.Handlers{
-		User:           userHandler,
-		HealthCheck:    healthcheckHandler,
-		Auth:           authHandler,
-		AuthMiddleware: middleware.AuthMiddleware(newJWTAuthAdapter(authHandler.Service())),
-	})
+	routers.RegisterV1Routes(router, middleware.AuthMiddleware(tokenMaker), userHandler, healthcheckHandler, authHandler)
 
 	addr := fmt.Sprintf("%s:%s", a.cfg.Server.Addr, a.cfg.Server.Port)
 	srv := &http.Server{

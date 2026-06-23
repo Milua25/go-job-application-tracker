@@ -8,6 +8,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
+const minSecretLength = 32
+
 type Config struct {
 	Server   ServerConfig
 	DB       DbConfig
@@ -87,10 +89,12 @@ func (d DbConfig) URL() string {
 }
 
 func LoadConfig() (*Config, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return nil, err
+	_ = godotenv.Load()
+
+	if len(getEnv("JWT_SECRET_KEY", "secret")) < minSecretLength || len(getEnv("SESSION_SECRET", "")) < minSecretLength || len(getEnv("CSRF_SECRET", "")) < minSecretLength {
+		return nil, fmt.Errorf("JWT_SECRET_KEY, SESSION_SECRET, and CSRF_SECRET must be at least %d characters long", minSecretLength)
 	}
+
 	cfg := &Config{
 		Server: ServerConfig{
 			Port: getEnv("SERVER_PORT", "8080"),
@@ -106,7 +110,7 @@ func LoadConfig() (*Config, error) {
 			MinIdleConns:           getEnvAsInt("DB_MIN_IDLE_CONNS", 2),
 			MaxOpenConns:           getEnvAsInt("DB_MAX_OPEN_CONNS", 10),
 			DefaultTimeoutDuration: getEnvAsInt("DB_DEFAULT_TIMEOUT_DURATION", 60), // in seconds
-			ConnMaxLifetime:        getEnvAsInt("DB_CONN_MAX_LIFETIME", 3600),       // in seconds (default 1 hour)
+			ConnMaxLifetime:        getEnvAsInt("DB_CONN_MAX_LIFETIME", 3600),      // in seconds (default 1 hour)
 		},
 		JWT: JWTConfig{
 			SecretKey:        getEnv("JWT_SECRET_KEY", "secret"),

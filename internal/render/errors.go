@@ -45,7 +45,8 @@ func ValidationError(c *gin.Context, err error) {
 	c.AbortWithStatusJSON(http.StatusUnprocessableEntity, errorsDocument{Errors: errs})
 }
 
-// internalServerError logs and sends a 500 response.
+// InternalServerError logs and sends a 500 response.
+// Logging uses stdlib log for simplicity; can be migrated to structured logging if needed.
 func InternalServerError(c *gin.Context, msg string, err error) {
 	log.Printf("internal server error: %s path: %s error: %s", c.Request.Method, c.Request.URL.Path, err.Error())
 	JSONError(c, http.StatusInternalServerError, "INTERNAL_SERVER_ERROR", msg)
@@ -69,14 +70,14 @@ func ConflictResponseError(c *gin.Context, msg string, err error) {
 	JSONError(c, http.StatusConflict, "CONFLICT", msg)
 }
 
-// unAuthorizedResponseError logs and sends a 401 response.
-func UnAuthorizedResponseError(c *gin.Context, msg string, err error) {
+// UnauthorizedResponseError logs and sends a 401 response.
+func UnauthorizedResponseError(c *gin.Context, msg string, err error) {
 	log.Printf("unauthorized server error: %s path: %s error: %s", c.Request.Method, c.Request.URL.Path, err.Error())
 	JSONError(c, http.StatusUnauthorized, "UNAUTHORIZED", msg)
 }
 
-// unAuthorizedBasicResponseError logs and sends a 401 response.
-func UnAuthorizedBasicResponseError(c *gin.Context, msg string, err error) {
+// UnauthorizedBasicResponseError logs and sends a 401 response.
+func UnauthorizedBasicResponseError(c *gin.Context, msg string, err error) {
 	log.Printf("unauthorized server error: %s path: %s error: %s", c.Request.Method, c.Request.URL.Path, err.Error())
 	c.Header("www-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
 	JSONError(c, http.StatusUnauthorized, "UNAUTHORIZED", msg)

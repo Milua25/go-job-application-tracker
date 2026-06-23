@@ -2,9 +2,11 @@ package middleware
 
 import (
 	"errors"
+	"log/slog"
 	"strings"
 
 	"github.com/Milua25/go-job-application-tracker/internal/render"
+	"github.com/Milua25/go-job-application-tracker/internal/token"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,12 +20,12 @@ const (
 )
 
 // Claims carries the verified identity fields AuthMiddleware needs from a token.
-type Claims struct {
-	Email     string
-	FirstName string
-	LastName  string
-	Uid       string
-}
+// type Claims struct {
+// 	Email     string
+// 	FirstName string
+// 	LastName  string
+// 	Uid       string
+// }
 
 // ErrTokenExpired is returned by TokenValidator when the token is past its expiry.
 var (
@@ -37,43 +39,50 @@ var (
 // TokenValidator is the only contract AuthMiddleware depends on.
 // Concrete implementations live in cmd/api so neither this package
 // nor the auth package imports the other.
-type TokenValidator interface {
-	ValidateToken(token string) (*Claims, error)
-}
+// type TokenValidator interface {
+// 	ValidateToken(token string) (*token.Claims, error)
+// }
 
-func AuthMiddleware(authService TokenValidator) gin.HandlerFunc {
+func AuthMiddleware(tokenMaker *token.JWTMaker) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if authService == nil {
+		if tokenMaker == nil {
+			slog.Error("token maker is nil")
 			render.InternalServerError(c, "auth service is not initialized", ErrNilAuthService)
 			return
 		}
 
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			render.UnAuthorizedResponseError(c, "authorization header is missing", ErrNoAuthorizationHeader)
+			slog.Debug("missing authorization header")
+			render.UnauthorizedResponseError(c, "authorization header is missing", ErrNoAuthorizationHeader)
 			return
 		}
 		const bearerPrefix = "Bearer "
 		if !strings.HasPrefix(authHeader, bearerPrefix) {
-			render.UnAuthorizedResponseError(c, "authorization header format must be 'Bearer <token>'", ErrInvalidAuthorizationHeaderFormat)
+			slog.Warn("invalid authorization header format")
+			render.UnauthorizedResponseError(c, "authorization header format must be 'Bearer <token>'", ErrInvalidAuthorizationHeaderFormat)
 			return
 		}
 
 		tokenString := authHeader[len(bearerPrefix):]
 		if tokenString == "" {
-			render.UnAuthorizedResponseError(c, "token is missing", ErrAuthTokenEmpty)
+			slog.Debug("empty token in authorization header")
+			render.UnauthorizedResponseError(c, "token is missing", ErrAuthTokenEmpty)
 			return
 		}
-		claims, err := authService.ValidateToken(tokenString)
+		claims, err := tokenMaker.ValidateToken(tokenString)
 		if err != nil {
-			if errors.Is(err, ErrTokenExpired) {
-				render.UnAuthorizedResponseError(c, "token has expired", ErrTokenExpired)
+			if errors.Is(err, token.ErrTokenExpired) {
+				slog.Debug("token expired")
+				render.UnauthorizedResponseError(c, "token has expired", token.ErrTokenExpired)
 				return
 			}
-			render.UnAuthorizedResponseError(c, "invalid token", err)
+			slog.Warn("token validation failed", "error", err)
+			render.UnauthorizedResponseError(c, "invalid token", err)
 			return
 		}
 
+		slog.Debug("token validated successfully", "user_id", claims.Uid, "email", claims.Email)
 		c.Set(ContextKeyEmail, claims.Email)
 		c.Set(ContextKeyFirstName, claims.FirstName)
 		c.Set(ContextKeyLastName, claims.LastName)

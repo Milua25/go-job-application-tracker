@@ -1,37 +1,38 @@
 package healthcheck
 
 import (
-	"context"
 	"database/sql"
-	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/Milua25/go-job-application-tracker/internal/render"
 	"github.com/gin-gonic/gin"
 )
 
 type HealthCheckHandler struct {
-	db *sql.DB
+	svc *healthCheckService
 }
 
 func NewHealthCheckHandler(db *sql.DB) *HealthCheckHandler {
-	return &HealthCheckHandler{db: db}
+	return &HealthCheckHandler{svc: newHealthCheckService(db)}
+}
+
+func (h *HealthCheckHandler) RegisterRoutes(r gin.IRouter) {
+	g := r.Group("/health")
+	g.GET("", h.CheckHealth)
+	g.GET("/ping", h.Ping)
 }
 
 func (h *HealthCheckHandler) CheckHealth(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
-	defer cancel()
+	status := h.svc.check(c.Request.Context())
 
 	dbStatus := "up"
-	if err := h.db.PingContext(ctx); err != nil {
-		slog.Error("database health check failed", "error", err)
+	if !status.dbUp {
 		dbStatus = "down"
 	}
 
-	health := HealthCheckResponse{
+	response := HealthCheckResponse{
 		Status: func() string {
-			if dbStatus == "up" {
+			if status.healthy {
 				return "healthy"
 			}
 			return "unhealthy"
@@ -39,14 +40,12 @@ func (h *HealthCheckHandler) CheckHealth(c *gin.Context) {
 		Checks: gin.H{"database": dbStatus},
 	}
 
-	slog.Info("health check result", "status", health.Status)
-
-	if dbStatus == "down" {
-		render.Fail(c, http.StatusServiceUnavailable, health)
+	if !status.healthy {
+		render.Fail(c, http.StatusServiceUnavailable, response)
 		return
 	}
 
-	render.OK(c, health)
+	render.OK(c, response)
 }
 
 func (h *HealthCheckHandler) Ping(c *gin.Context) {

@@ -1,6 +1,8 @@
 package auth
 
-import "time"
+import (
+	"time"
+)
 
 type LoginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
@@ -25,14 +27,26 @@ type RegisterResponse struct {
 }
 
 type LoginResponse struct {
-	ID           string `json:"id"`
-	FirstName    string `json:"first_name"`
-	LastName     string `json:"last_name"`
-	Email        string `json:"email"`
-	Token        string `json:"token"`
-	RefreshToken string `json:"refresh_token"`
+	ID                    string    `json:"id"`
+	FirstName             string    `json:"first_name"`
+	LastName              string    `json:"last_name"`
+	Email                 string    `json:"email"`
+	Token                 string    `json:"token"`
+	RefreshToken          string    `json:"refresh_token"`
+	TokenExpiresAt        time.Time `json:"token_expires_at"`
+	RefreshTokenExpiresAt time.Time `json:"refresh_token_expires_at"`
 }
 
-type RefreshRequest struct {
+type RenewAccessTokenReq struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
+type RenewAccessTokenResp struct {
+	Token                 string    `json:"token"`
+	TokenExpiresAt        time.Time `json:"token_expires_at"`
+	RefreshTokenExpiresAt time.Time `json:"refresh_token_expires_at"`
+}
+
+type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }

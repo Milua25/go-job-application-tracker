@@ -7,7 +7,8 @@ import (
 )
 
 // Document is the JSON:API top-level document.
-// Exactly one of Data or Meta must be set per the spec.
+// Per JSON:API spec, exactly one of Data or Meta should be set at the top level.
+// The struct allows both to be omitted or both to be set; callers must enforce this constraint.
 type Document struct {
 	Data  interface{} `json:"data,omitempty"`
 	Meta  interface{} `json:"meta,omitempty"`
@@ -29,7 +30,15 @@ func NoContent(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+func Created(c *gin.Context, data interface{}) {
+	c.JSON(http.StatusCreated, Document{Data: data})
+}
+
 // Fail sends a non-2xx response that still carries structured data (e.g. health checks).
+// status must be a valid HTTP status code (100-599); behavior is undefined for invalid codes.
 func Fail(c *gin.Context, status int, data interface{}) {
+	if status < 100 || status > 599 {
+		status = http.StatusInternalServerError
+	}
 	c.JSON(status, Document{Data: data})
 }

@@ -15,8 +15,6 @@ type User struct {
 	Timezone        string     `db:"timezone"`
 	IsActive        bool       `db:"is_active,default:true"`
 	EmailVerifiedAt *time.Time `db:"email_verified_at"`
-	Token           *string    `db:"token"`
-	RefreshToken    *string    `db:"refresh_token"`
 	IsAdmin         bool       `db:"is_admin,default:false"`
 	CreatedAt       time.Time  `db:"created_at"`
 	LastLoginAt     *time.Time `db:"last_login_at"`

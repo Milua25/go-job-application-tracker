@@ -1,6 +1,7 @@
 package sqlconnect
 
 import (
+	"database/sql"
 	"log/slog"
 
 	"gorm.io/driver/postgres"
@@ -26,27 +27,33 @@ func ConnectToPgDB(dsn string) (*gorm.DB, error) {
 	return gormDB, nil
 }
 
-func WithTx(db *gorm.DB, fn func(tx *gorm.DB) error) error {
-	tx := db.Begin()
-	if tx.Error != nil {
-		return tx.Error
-	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	if err := fn(tx); err != nil {
-		tx.Rollback()
+func withTx(db *gorm.DB, fn func(tx *gorm.DB) error, opts *sql.TxOptions) error {
+	err := db.Transaction(fn, opts)
+	if err != nil {
+		slog.Error("Transaction failed", "error", err)
 		return err
 	}
-
-	if err := tx.Commit().Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
 	return nil
+
+	// tx := db.Begin()
+	// if tx.Error != nil {
+	// 	return tx.Error
+	// }
+
+	// defer func() {
+	// 	if r := recover(); r != nil {
+	// 		tx.Rollback()
+	// 	}
+	// }()
+
+	// if err := fn(tx); err != nil {
+	// 	tx.Rollback()
+	// 	return err
+	// }
+
+	// if err := tx.Commit().Error; err != nil {
+	// 	tx.Rollback()
+	// 	return err
+	// }
+
 }
