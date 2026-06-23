@@ -3,19 +3,20 @@ package sqlconnect
 import (
 	"database/sql"
 	"log/slog"
+	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-func ConnectToPgDB(dsn string) (*gorm.DB, error) {
-	// Implement your logic to connect to PostgreSQL using GORM here
-	slog.Info("Connecting to PostgreSQL database...")
+func ConnectToPgDB(dsn string, log *slog.Logger) (*gorm.DB, error) {
+	log.Info("connecting to PostgreSQL database")
 
-	// Connection pool settings
 	gormConfig := &gorm.Config{
 		PrepareStmt:            true,
 		SkipDefaultTransaction: true,
+		Logger:                 newSlogGORMLogger(log, logger.Warn, 200*time.Millisecond),
 	}
 
 	gormDB, err := gorm.Open(postgres.Open(dsn), gormConfig)

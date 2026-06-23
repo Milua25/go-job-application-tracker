@@ -11,4 +11,5 @@ var (
 	ErrValidation             = errors.New("error validating token")
 	ErrTokenMalformed         = errors.New("malformed token")
 	ErrIncorrectSigningMethod = errors.New("incorrect signing method")
+	ErrNotFound               = errors.New("session not found")
 )

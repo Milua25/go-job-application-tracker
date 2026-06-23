@@ -13,12 +13,14 @@ import (
 )
 
 func main() {
+	// Load configuration
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		slog.Error("Failed to load configuration", "error", err)
 		return
 	}
 
+	// HPP (HTTP Parameter Pollution) protection options
 	hppOptions := middleware.HPPOptions{
 		CheckBody:        true,
 		CheckQuery:       true,
@@ -45,7 +47,7 @@ func main() {
 		middleware.NewRateLimiter(10).Limit(),
 	}
 
-	gormDB, err := sqlconnect.ConnectToPgDB(cfg.DB.DSN())
+	gormDB, err := sqlconnect.ConnectToPgDB(cfg.DB.DSN(), sloggerHandler)
 	if err != nil {
 		slog.Error("Failed to connect to the database", "error", err)
 		return

@@ -2,9 +2,9 @@ package auth
 
 import (
 	"errors"
+	"log/slog"
 
 	"github.com/Milua25/go-job-application-tracker/internal/render"
-	"github.com/Milua25/go-job-application-tracker/internal/session"
 	"github.com/Milua25/go-job-application-tracker/internal/token"
 	"github.com/Milua25/go-job-application-tracker/internal/user"
 	"github.com/gin-gonic/gin"
@@ -14,16 +14,17 @@ type AuthHandler struct {
 	authService *authService
 }
 
-func NewAuthHandler(userStore user.Repository, sessionStore session.Repository, tokenMaker *token.JWTMaker) *AuthHandler {
+func NewAuthHandler(userStore user.Repository, sessionStore token.Repository, tokenMaker *token.JWTMaker) *AuthHandler {
 	return &AuthHandler{
 		authService: newAuthService(userStore, sessionStore, tokenMaker),
 	}
 }
 
-func (h *AuthHandler) RegisterRoutes(r gin.IRouter) {
+func (h *AuthHandler) RegisterRoutes(r gin.IRouter, authMiddleware gin.HandlerFunc) {
 	g := r.Group("/auth")
 	g.POST("/register", h.RegisterUser)
 	g.POST("/login", h.LoginUser)
+	g.POST("/logout", authMiddleware, h.LogoutUser)
 }
 
 func (h *AuthHandler) RegisterUser(c *gin.Context) {
@@ -93,6 +94,26 @@ func (h *AuthHandler) LoginUser(c *gin.Context) {
 	render.OK(c, gin.H{
 		"message": "user logged in successfully",
 		"user":    response,
+	})
+}
+
+func (h *AuthHandler) LogoutUser(c *gin.Context) {
+	// get user id from context
+	activeUserId := c.GetString("uid")
+	if activeUserId == "" {
+		slog.Warn("user id not found in context")
+		render.UnauthorizedBasicResponseError(c, "user not authenticated", errors.New("user id not found in context"))
+		return
+	}
+	// Call the authService to handle the logout logic
+	err := h.authService.LogoutUser(c.Request.Context(), activeUserId)
+	if err != nil {
+		render.InternalServerError(c, "failed to logout user", err)
+		return
+	}
+
+	render.OK(c, gin.H{
+		"message": "user logged out successfully",
 	})
 }
 

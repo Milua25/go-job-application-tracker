@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -36,8 +37,12 @@ type DbConfig struct {
 }
 
 type ServerConfig struct {
-	Port string
-	Addr string
+	Port            string
+	Addr            string
+	ReadTimeout     time.Duration
+	WriteTimeout    time.Duration
+	IdleTimeout     time.Duration
+	ShutdownTimeout time.Duration
 }
 
 type JWTConfig struct {
@@ -53,6 +58,18 @@ func getEnv(key, defaultValue string) string {
 		return defaultValue
 	}
 	return value
+}
+
+func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
+	valueStr := os.Getenv(key)
+	if valueStr == "" {
+		return defaultValue
+	}
+	d, err := time.ParseDuration(valueStr)
+	if err != nil {
+		return defaultValue
+	}
+	return d
 }
 
 func getEnvAsInt(key string, defaultValue int) int {
@@ -97,8 +114,12 @@ func LoadConfig() (*Config, error) {
 
 	cfg := &Config{
 		Server: ServerConfig{
-			Port: getEnv("SERVER_PORT", "8080"),
-			Addr: getEnv("SERVER_ADDR", "0.0.0.0"),
+			Port:            getEnv("SERVER_PORT", "8000"),
+			Addr:            getEnv("SERVER_ADDR", "0.0.0.0"),
+			ReadTimeout:     getEnvAsDuration("SERVER_READ_TIMEOUT", 10*time.Second),
+			WriteTimeout:    getEnvAsDuration("SERVER_WRITE_TIMEOUT", 30*time.Second),
+			IdleTimeout:     getEnvAsDuration("SERVER_IDLE_TIMEOUT", 60*time.Second),
+			ShutdownTimeout: getEnvAsDuration("SERVER_SHUTDOWN_TIMEOUT", 30*time.Second),
 		},
 		DB: DbConfig{
 			Host:                   getEnv("DB_HOST", "localhost"),

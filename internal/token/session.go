@@ -1,4 +1,4 @@
-package session
+package token
 
 import (
 	"context"
@@ -20,4 +20,5 @@ type Repository interface {
 	CreateRefreshToken(ctx context.Context, s *Session) error
 	GetRefreshToken(ctx context.Context, refreshToken string) (*Session, error)
 	DeleteRefreshToken(ctx context.Context, refreshToken string) error
+	DeleteSessionsByEmail(ctx context.Context, email string) error
 }

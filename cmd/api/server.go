@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/Milua25/go-job-application-tracker/internal/auth"
 	"github.com/Milua25/go-job-application-tracker/internal/config"
@@ -52,24 +51,32 @@ func (a *app) run() error {
 
 	addr := fmt.Sprintf("%s:%s", a.cfg.Server.Addr, a.cfg.Server.Port)
 	srv := &http.Server{
-		Addr:    addr,
-		Handler: router,
+		Addr:         addr,
+		Handler:      router,
+		ReadTimeout:  a.cfg.Server.ReadTimeout,
+		WriteTimeout: a.cfg.Server.WriteTimeout,
+		IdleTimeout:  a.cfg.Server.IdleTimeout,
 	}
-
+	serverErrors := make(chan error, 1)
 	go func() {
 		slog.Info("server listening", "addr", addr)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("server error", "error", err)
-			os.Exit(1)
+			serverErrors <- err
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+
+	select {
+	case <-quit:
+	case err := <-serverErrors:
+		return err
+	}
 
 	slog.Info("shutting down server")
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), a.cfg.Server.ShutdownTimeout)
 	defer cancel()
 
 	return srv.Shutdown(ctx)

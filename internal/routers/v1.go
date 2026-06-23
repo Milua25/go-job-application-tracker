@@ -12,5 +12,5 @@ func RegisterV1Routes(router *gin.Engine, authMiddleware gin.HandlerFunc, u *use
 
 	u.RegisterRoutes(v1, authMiddleware)
 	hc.RegisterRoutes(v1)
-	a.RegisterRoutes(v1)
+	a.RegisterRoutes(v1, authMiddleware)
 }

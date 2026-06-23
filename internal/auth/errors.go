@@ -22,4 +22,6 @@ var (
 	ErrNotFound = errors.New("user not found")
 
 	ErrInvalidRefreshToken = errors.New("invalid refresh token")
+
+	ErrFailedToDeleteSession = errors.New("failed to delete session")
 )

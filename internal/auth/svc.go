@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/Milua25/go-job-application-tracker/internal/session"
 	"github.com/Milua25/go-job-application-tracker/internal/token"
 	"github.com/Milua25/go-job-application-tracker/internal/user"
 	"github.com/Milua25/go-job-application-tracker/pkg/utils"
@@ -15,11 +14,11 @@ import (
 
 type authService struct {
 	userStore    user.Repository
-	sessionStore session.Repository
+	sessionStore token.Repository
 	tokenMaker   *token.JWTMaker
 }
 
-func newAuthService(store user.Repository, sessionStore session.Repository, tokenMaker *token.JWTMaker) *authService {
+func newAuthService(store user.Repository, sessionStore token.Repository, tokenMaker *token.JWTMaker) *authService {
 	return &authService{
 		userStore:    store,
 		sessionStore: sessionStore,
@@ -85,16 +84,23 @@ func (h *authService) loginUser(ctx context.Context, req LoginRequest) (*user.Us
 		return nil, "", "", err
 	}
 
+	// check if the user already has an active session and delete it before creating a new one
+	err = h.sessionStore.DeleteRefreshToken(ctx, foundUser.Email)
+	if err != nil && !errors.Is(err, token.ErrNotFound) {
+		slog.Error("failed to delete existing session", "email", foundUser.Email, "error", err)
+		return nil, "", "", ErrFailedToDeleteSession
+	}
+
 	refreshToken, refreshTokenIssuedAt, refreshTokenExpiry, err := h.tokenMaker.CreateRefreshToken(foundUser)
 	if err != nil {
 		slog.Error("failed to generate refresh token", "email", foundUser.Email, "error", err)
-		return nil, "", "", err
+		return nil, "", "", ErrTokenCreationFailed
 	}
 
 	// hash the refresh token before storing it in the database
 	hashedRefreshToken := utils.HashToken(refreshToken)
 
-	newUserSession := session.Session{
+	newUserSession := token.Session{
 		ID:           uuid.New(),
 		UserEmail:    foundUser.Email,
 		RefreshToken: hashedRefreshToken,
@@ -106,7 +112,7 @@ func (h *authService) loginUser(ctx context.Context, req LoginRequest) (*user.Us
 	err = h.sessionStore.CreateRefreshToken(ctx, &newUserSession)
 	if err != nil {
 		slog.Error("failed to create session", "email", foundUser.Email, "error", err)
-		return nil, "", "", err
+		return nil, "", "", ErrSessionCreationFailed
 	}
 
 	return foundUser, accessToken, refreshToken, nil
@@ -123,7 +129,7 @@ func (h *authService) RefreshAccessToken(ctx context.Context, req RefreshTokenRe
 	// retrieve the session from the database using the hashed refresh token
 	retrievedSess, err := h.sessionStore.GetRefreshToken(ctx, hashedRefreshToken)
 	if err != nil {
-		if errors.Is(err, session.ErrNotFound) {
+		if errors.Is(err, token.ErrNotFound) {
 			return "", ErrInvalidRefreshToken
 		}
 		slog.Error("failed to retrieve session by refresh token", "refresh_token", req.RefreshToken, "error", err)
@@ -161,4 +167,22 @@ func (h *authService) RefreshAccessToken(ctx context.Context, req RefreshTokenRe
 // 	return "", nil
 // }
 
-func (h *authService) LogoutUser(ctx context.Context) {}
+func (h *authService) LogoutUser(ctx context.Context, userId string) error {
+	// check if the user exists
+	foundUser, err := h.userStore.GetByID(ctx, userId)
+	if err != nil {
+		if errors.Is(err, user.ErrNotFound) {
+			return ErrUserNotFound
+		}
+		slog.Error("failed to retrieve user by id", "id", userId, "error", err)
+		return err
+	}
+	// check if the user has an active session and delete it
+	err = h.sessionStore.DeleteSessionsByEmail(ctx, foundUser.Email)
+	if err != nil {
+		slog.Error("failed to delete sessions", "email", foundUser.Email, "error", err)
+		return ErrFailedToDeleteSession
+	}
+
+	return nil
+}

@@ -45,6 +45,7 @@ var (
 
 func AuthMiddleware(tokenMaker *token.JWTMaker) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		slog.Info("auth middleware invoked")
 		if tokenMaker == nil {
 			slog.Error("token maker is nil")
 			render.InternalServerError(c, "auth service is not initialized", ErrNilAuthService)
