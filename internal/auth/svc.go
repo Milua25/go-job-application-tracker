@@ -27,9 +27,8 @@ func newAuthService(store user.Repository, sessionStore token.Repository, tokenM
 }
 
 func (h *authService) register(ctx context.Context, req RegisterRequest) (*user.User, error) {
-
 	existingUser, err := h.userStore.GetByEmail(ctx, req.Email)
-	if err != nil && !errors.Is(err, ErrNotFound) {
+	if err != nil && !errors.Is(err, user.ErrNotFound) {
 		slog.Error("failed to check existing user", "error", err)
 		return nil, err
 	}
@@ -61,122 +60,105 @@ func (h *authService) register(ctx context.Context, req RegisterRequest) (*user.
 	return &newUser, nil
 }
 
-func (h *authService) loginUser(ctx context.Context, req LoginRequest) (*user.User, string, string, error) {
+func (h *authService) loginUser(ctx context.Context, req LoginRequest) (*user.User, string, time.Time, string, time.Time, error) {
+	slog.Debug("logging in user", "email", req.Email)
 
 	foundUser, err := h.userStore.GetByEmail(ctx, req.Email)
 	if err != nil {
 		if errors.Is(err, user.ErrNotFound) {
-			return nil, "", "", ErrInvalidCredentials
+			return nil, "", time.Time{}, "", time.Time{}, ErrInvalidCredentials
 		}
 		slog.Error("failed to retrieve user by email", "email", req.Email, "error", err)
-		return nil, "", "", err
+		return nil, "", time.Time{}, "", time.Time{}, err
 	}
 
-	// checks if the provided password matches the stored password hash
 	if !utils.VerifyPassword(foundUser.PasswordHash, req.Password) {
 		slog.Warn("authentication failed", "email", req.Email)
-		return nil, "", "", ErrInvalidCredentials
+		return nil, "", time.Time{}, "", time.Time{}, ErrInvalidCredentials
 	}
 
-	accessToken, err := h.tokenMaker.GenerateToken(foundUser)
+	sessionID := uuid.New()
+
+	accessToken, accessTokenExpiresAt, err := h.tokenMaker.GenerateToken(foundUser, sessionID.String())
 	if err != nil {
 		slog.Error("failed to generate token", "email", foundUser.Email, "error", err)
-		return nil, "", "", err
+		return nil, "", time.Time{}, "", time.Time{}, err
 	}
 
-	// delete any existing session before creating a new one to prevent unique constraint violations on refresh_token
-	err = h.sessionStore.DeleteSessionsByEmail(ctx, foundUser.Email)
-	if err != nil && !errors.Is(err, token.ErrNotFound) {
-		slog.Error("failed to delete existing session", "email", foundUser.Email, "error", err)
-		return nil, "", "", ErrFailedToDeleteSession
-	}
-
-	refreshToken, refreshTokenIssuedAt, refreshTokenExpiry, err := h.tokenMaker.CreateRefreshToken(foundUser)
+	refreshToken, refreshTokenIssuedAt, refreshTokenExpiresAt, err := h.tokenMaker.CreateRefreshToken(foundUser)
 	if err != nil {
 		slog.Error("failed to generate refresh token", "email", foundUser.Email, "error", err)
-		return nil, "", "", ErrTokenCreationFailed
+		return nil, "", time.Time{}, "", time.Time{}, ErrTokenCreationFailed
 	}
-
-	// hash the refresh token before storing it in the database
-	hashedRefreshToken := utils.HashToken(refreshToken)
 
 	newUserSession := token.Session{
-		ID:           uuid.New(),
-		UserEmail:    foundUser.Email,
-		RefreshToken: hashedRefreshToken,
+		ID:           sessionID,
+		UserID:       foundUser.ID,
+		RefreshToken: utils.HashToken(refreshToken),
 		IsRevoked:    false,
 		CreatedAt:    refreshTokenIssuedAt,
-		ExpiresAt:    refreshTokenExpiry,
+		ExpiresAt:    refreshTokenExpiresAt,
 	}
 
-	err = h.sessionStore.CreateRefreshToken(ctx, &newUserSession)
-	if err != nil {
+	if err = h.sessionStore.CreateSession(ctx, &newUserSession); err != nil {
 		slog.Error("failed to create session", "email", foundUser.Email, "error", err)
-		return nil, "", "", ErrSessionCreationFailed
+		return nil, "", time.Time{}, "", time.Time{}, ErrSessionCreationFailed
 	}
 
-	return foundUser, accessToken, refreshToken, nil
+	return foundUser, accessToken, accessTokenExpiresAt, refreshToken, refreshTokenExpiresAt, nil
 }
 
-func (h *authService) RefreshAccessToken(ctx context.Context, req RefreshTokenRequest) (string, error) {
+func (h *authService) RefreshAccessToken(ctx context.Context, req RefreshTokenRequest) (string, time.Time, error) {
 	if req.RefreshToken == "" {
-		return "", ErrInvalidRefreshToken
+		return "", time.Time{}, ErrInvalidRefreshToken
 	}
 
-	// hash the provided refresh token before comparing it with the stored hash
-	hashedRefreshToken := utils.HashToken(req.RefreshToken)
-
-	// retrieve the session from the database using the hashed refresh token
-	retrievedSess, err := h.sessionStore.GetRefreshToken(ctx, hashedRefreshToken)
+	retrievedSess, err := h.sessionStore.GetSessionByRefreshToken(ctx, utils.HashToken(req.RefreshToken))
 	if err != nil {
 		if errors.Is(err, token.ErrNotFound) {
-			return "", ErrInvalidRefreshToken
+			return "", time.Time{}, ErrInvalidRefreshToken
 		}
-		slog.Error("failed to retrieve session by refresh token", "refresh_token", req.RefreshToken, "error", err)
-		return "", err
+		slog.Error("failed to retrieve session by refresh token", "error", err)
+		return "", time.Time{}, err
 	}
 
-	// check if the session is revoked or expired
 	if retrievedSess.IsRevoked || time.Now().After(retrievedSess.ExpiresAt) {
-		return "", ErrInvalidRefreshToken
+		return "", time.Time{}, ErrInvalidRefreshToken
 	}
 
-	// retrieve the user associated with the session
-	foundUser, err := h.userStore.GetByEmail(ctx, retrievedSess.UserEmail)
+	foundUser, err := h.userStore.GetByID(ctx, retrievedSess.UserID.String())
 	if err != nil {
 		if errors.Is(err, user.ErrNotFound) {
-			return "", ErrInvalidRefreshToken
+			return "", time.Time{}, ErrInvalidRefreshToken
 		}
-		slog.Error("failed to retrieve user by email", "email", retrievedSess.UserEmail, "error", err)
-		return "", err
+		slog.Error("failed to retrieve user by id", "user_id", retrievedSess.UserID, "error", err)
+		return "", time.Time{}, err
 	}
 
-	// generate a new access token for the user
-	accessToken, err := h.tokenMaker.GenerateToken(foundUser)
+	accessToken, accessTokenExpiresAt, err := h.tokenMaker.GenerateToken(foundUser, retrievedSess.ID.String())
 	if err != nil {
 		slog.Error("failed to generate access token", "email", foundUser.Email, "error", err)
-		return "", err
+		return "", time.Time{}, err
 	}
 
-	return accessToken, nil
+	return accessToken, accessTokenExpiresAt, nil
 }
 
-func (h *authService) LogoutUser(ctx context.Context, userId string) error {
-	// check if the user exists
-	foundUser, err := h.userStore.GetByID(ctx, userId)
-	if err != nil {
-		if errors.Is(err, user.ErrNotFound) {
-			return ErrUserNotFound
+func (h *authService) LogoutUser(ctx context.Context, sessionID string) error {
+	if err := h.sessionStore.DeleteSessionByID(ctx, sessionID); err != nil {
+		if errors.Is(err, token.ErrNotFound) {
+			return ErrNotFound
 		}
-		slog.Error("failed to retrieve user by id", "id", userId, "error", err)
+		slog.Error("failed to delete session by id", "id", sessionID, "error", err)
 		return err
 	}
-	// check if the user has an active session and delete it
-	err = h.sessionStore.DeleteSessionsByEmail(ctx, foundUser.Email)
-	if err != nil {
-		slog.Error("failed to delete sessions", "email", foundUser.Email, "error", err)
-		return ErrFailedToDeleteSession
-	}
+	return nil
+}
 
+func (h *authService) DeleteAllSessionsForUser(ctx context.Context, userID uuid.UUID) error {
+	if err := h.sessionStore.DeleteSessionsByUserID(ctx, userID); err != nil {
+		slog.Error("failed to delete sessions for user", "user_id", userID, "error", err)
+		return err
+	}
 	return nil
 }

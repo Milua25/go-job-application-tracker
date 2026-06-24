@@ -16,6 +16,12 @@ type Config struct {
 	DB       DbConfig
 	JWT      JWTConfig
 	Security SecurityConfig
+	Admin    AdminConfig
+}
+
+type AdminConfig struct {
+	Email    string
+	Password string
 }
 
 type SecurityConfig struct {
@@ -142,6 +148,10 @@ func LoadConfig() (*Config, error) {
 		Security: SecurityConfig{
 			SessionSecret: getEnv("SESSION_SECRET", ""),
 			CSRFSecret:    getEnv("CSRF_SECRET", ""),
+		},
+		Admin: AdminConfig{
+			Email:    getEnv("ADMIN_EMAIL", "admin@example.com"),
+			Password: getEnv("ADMIN_PASSWORD", "adminpassword"),
 		},
 	}
 	return cfg, nil

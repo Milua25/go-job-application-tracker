@@ -36,22 +36,17 @@ func NewJWTMaker(secretKey, issuer, expireIn, refreshExpireIn string) (*JWTMaker
 	}, nil
 }
 
-// RefreshDuration returns the configured refresh token lifetime.
-func (s *JWTMaker) RefreshDuration() time.Duration {
-	return s.refreshDuration
-}
-
 // GenerateToken generates an access token for the given user.
-func (s *JWTMaker) GenerateToken(u *user.User) (string, error) {
-	tokenClaims := newUserClaims(u, s.issuer, s.expireDuration)
+func (s *JWTMaker) GenerateToken(u *user.User, sessionID string) (string, time.Time, error) {
+	tokenClaims := newUserClaims(u, sessionID, s.issuer, s.expireDuration)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, tokenClaims)
 	signedToken, err := token.SignedString([]byte(s.secretKey))
 	if err != nil {
-		return "", fmt.Errorf("error signing token: %w", err)
+		return "", time.Time{}, fmt.Errorf("error signing token: %w", err)
 	}
 
-	return signedToken, nil
+	return signedToken, tokenClaims.ExpiresAt.Time, nil
 }
 
 // GenerateRefreshToken generates a refresh token for the given user.

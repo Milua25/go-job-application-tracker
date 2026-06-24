@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+
+	"github.com/google/uuid"
 )
 
 type userService struct {
@@ -22,14 +24,14 @@ func (s *userService) getByID(ctx context.Context, id string) (*User, error) {
 	return s.store.GetByID(ctx, id)
 }
 
-func (s *userService) delete(ctx context.Context, id string) error {
+func (s *userService) deleteByID(ctx context.Context, id string) error {
 	if _, err := s.store.GetByID(ctx, id); err != nil {
 		return err
 	}
 	return s.store.Delete(ctx, id)
 }
 
-func (s *userService) update(ctx context.Context, id string, req UpdateUserRequest) (*User, error) {
+func (s *userService) updateByID(ctx context.Context, id string, req UpdateUserRequest) (*User, error) {
 	u, err := s.store.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -60,4 +62,37 @@ func (s *userService) update(ctx context.Context, id string, req UpdateUserReque
 		return nil, err
 	}
 	return u, nil
+}
+
+// func (s *userService) getByEmail(ctx context.Context, email string) (*User, error) {
+// 	return s.store.GetByEmail(ctx, email)
+// }
+
+func (s *userService) createUser(ctx context.Context, req CreateUserRequest) (*User, error) {
+	existingUser, err := s.store.GetByEmail(ctx, req.Email)
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		slog.Error("failed to check existing user", "error", err)
+		return nil, err
+	}
+	if existingUser != nil {
+		return nil, ErrEmailInUse
+	}
+
+	newUser := User{
+		ID:        uuid.New(),
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		Email:     req.Email,
+		IsAdmin:   req.IsAdmin,
+	}
+
+	if err := s.store.Create(ctx, &newUser); err != nil {
+		return nil, err
+	}
+
+	return &newUser, nil
+}
+
+func (s *userService) findAllWithSessions(ctx context.Context) ([]*User, error) {
+	return s.store.FindAllWithSessions(ctx)
 }

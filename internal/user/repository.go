@@ -9,4 +9,5 @@ type Repository interface {
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	Update(ctx context.Context, u *User) error
 	Delete(ctx context.Context, id string) error
+	FindAllWithSessions(ctx context.Context) ([]*User, error)
 }

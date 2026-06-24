@@ -1,0 +1,2 @@
+ALTER TABLE sessions
+    ADD COLUMN IF NOT EXISTS user_email VARCHAR(254);

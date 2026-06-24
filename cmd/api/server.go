@@ -48,7 +48,7 @@ func (a *app) run() error {
 	router := gin.New()
 	router.Use(a.middleware...)
 
-	routers.RegisterV1Routes(router, middleware.AuthMiddleware(tokenMaker), userHandler, healthcheckHandler, authHandler)
+	routers.RegisterV1Routes(router, middleware.AuthMiddleware(tokenMaker), middleware.GetAdminMiddleware(tokenMaker), userHandler, healthcheckHandler, authHandler)
 
 	addr := fmt.Sprintf("%s:%s", a.cfg.Server.Addr, a.cfg.Server.Port)
 	srv := &http.Server{

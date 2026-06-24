@@ -69,6 +69,12 @@ func main() {
 
 	storePostgres := sqlconnect.NewPostgresStore(gormDB)
 
+	// Bootstrap the admin user
+	if err := bootStrapAdmin(storePostgres.User, cfg.Admin.Email, cfg.Admin.Password); err != nil {
+		slog.Error("Failed to bootstrap admin user", "error", err)
+		return
+	}
+
 	// Create the app instance
 	app := &app{
 		cfg:        cfg,

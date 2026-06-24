@@ -95,3 +95,16 @@ func (s *UserStore) Delete(ctx context.Context, id string) error {
 		return nil
 	}, &sql.TxOptions{})
 }
+
+func (s *UserStore) FindAllWithSessions(ctx context.Context) ([]*user.User, error) {
+	var users []*user.User
+	err := s.db.WithContext(ctx).Debug().
+		Joins("JOIN sessions ON sessions.user_id = users.id").
+		Distinct("users.*").
+		Find(&users).Error
+	if err != nil {
+		slog.Error("failed to fetch users with sessions", "error", err)
+		return nil, err
+	}
+	return users, nil
+}

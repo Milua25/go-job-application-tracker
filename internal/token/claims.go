@@ -13,10 +13,11 @@ type Claims struct {
 	LastName  string
 	Uid       string
 	IsAdmin   bool
+	SessionID string
 	jwt.RegisteredClaims
 }
 
-func newUserClaims(user *user.User, issuer string, expireDuration time.Duration) *Claims {
+func newUserClaims(user *user.User, sessionID, issuer string, expireDuration time.Duration) *Claims {
 	now := time.Now()
 	return &Claims{
 		Email:     user.Email,
@@ -30,6 +31,7 @@ func newUserClaims(user *user.User, issuer string, expireDuration time.Duration)
 			Issuer:    issuer,
 			IssuedAt:  jwt.NewNumericDate(now),
 		},
+		SessionID: sessionID,
 	}
 }
 

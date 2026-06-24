@@ -4,20 +4,22 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type User struct {
-	ID              uuid.UUID  `db:"id"`
-	Email           string     `db:"email"`
-	PasswordHash    string     `db:"password_hash"`
-	FirstName       string     `db:"first_name"`
-	LastName        string     `db:"last_name"`
-	Timezone        string     `db:"timezone"`
-	IsActive        bool       `db:"is_active,default:true"`
-	EmailVerifiedAt *time.Time `db:"email_verified_at"`
-	IsAdmin         bool       `db:"is_admin,default:false"`
-	CreatedAt       time.Time  `db:"created_at"`
-	LastLoginAt     *time.Time `db:"last_login_at"`
-	UpdatedAt       time.Time  `db:"updated_at"`
-	DeletedAt       *time.Time `db:"deleted_at"`
+	ID              uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Email           string    `gorm:"uniqueIndex;not null;size:254"`
+	PasswordHash    string    `gorm:"not null"`
+	FirstName       string    `gorm:"not null;size:50"`
+	LastName        string    `gorm:"not null;size:50"`
+	Timezone        string    `gorm:"not null;default:UTC"`
+	IsActive        bool      `gorm:"not null;default:true"`
+	EmailVerifiedAt *time.Time
+	IsAdmin         bool `gorm:"not null;default:false"`
+	CreatedAt       time.Time
+	LastLoginAt     *time.Time
+	UpdatedAt       time.Time
+	DeletedAt       gorm.DeletedAt `gorm:"index"`
+	// Sessions        []token.Session `gorm:"foreignKey:UserID"`
 }

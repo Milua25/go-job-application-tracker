@@ -41,9 +41,20 @@ func applyDBMigrations(dsn string) error {
 	}
 	defer m.Close()
 
+	version, dirty, err := m.Version()
+	if err != nil && !errors.Is(err, migrate.ErrNilVersion) {
+		return fmt.Errorf("failed to get migration version: %w", err)
+	}
+	if dirty {
+		return fmt.Errorf("database is in a dirty state at version %d", version)
+	}
+
 	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return fmt.Errorf("migration up failed: %w", err)
 	}
+
+	newVersion, _, _ := m.Version()
+	slog.Info("migrations applied", "from_version", version, "to_version", newVersion)
 
 	return nil
 }

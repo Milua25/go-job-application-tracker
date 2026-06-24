@@ -1,6 +1,6 @@
 include .env
 
-MIGRATIONS_PATH= /Users/huskiepuppy05/Development/Personal/go-job-application-tracker/cmd/migrations
+MIGRATIONS_PATH= /Users/huskiepuppy05/Development/Personal/go-job-application-tracker/cmd/api/migrations
 
 
 .PHONY: migrate-create
