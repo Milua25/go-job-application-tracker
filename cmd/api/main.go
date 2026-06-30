@@ -44,7 +44,7 @@ func main() {
 		// middleware.CSRFTokenHeader(),
 		middleware.Compression(),
 		hppOptions.Hpp(),
-		middleware.NewRateLimiter(10).Limit(),
+		middleware.NewRateLimiter(cfg.RateLimit.Limit, cfg.RateLimit.Reset).Limit(),
 	}
 
 	gormDB, err := sqlconnect.ConnectToPgDB(cfg.DB.DSN(), sloggerHandler)

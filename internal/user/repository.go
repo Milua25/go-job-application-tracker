@@ -1,6 +1,10 @@
 package user
 
-import "context"
+import (
+	"context"
+
+	"github.com/google/uuid"
+)
 
 type Repository interface {
 	GetByID(ctx context.Context, id string) (*User, error)
@@ -10,4 +14,8 @@ type Repository interface {
 	Update(ctx context.Context, u *User) error
 	Delete(ctx context.Context, id string) error
 	FindAllWithSessions(ctx context.Context) ([]*User, error)
+}
+
+type SessionRevoker interface {
+	DeleteSessionsByUserID(ctx context.Context, userID uuid.UUID) error
 }

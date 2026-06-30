@@ -6,8 +6,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/Milua25/go-job-application-tracker/internal/user"
-
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -37,8 +35,8 @@ func NewJWTMaker(secretKey, issuer, expireIn, refreshExpireIn string) (*JWTMaker
 }
 
 // GenerateToken generates an access token for the given user.
-func (s *JWTMaker) GenerateToken(u *user.User, sessionID string) (string, time.Time, error) {
-	tokenClaims := newUserClaims(u, sessionID, s.issuer, s.expireDuration)
+func (s *JWTMaker) GenerateToken(userID, email, firstName, lastName string, isAdmin bool, sessionID string) (string, time.Time, error) {
+	tokenClaims := newUserClaims(userID, email, firstName, lastName, isAdmin, sessionID, s.issuer, s.expireDuration)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, tokenClaims)
 	signedToken, err := token.SignedString([]byte(s.secretKey))
@@ -50,8 +48,8 @@ func (s *JWTMaker) GenerateToken(u *user.User, sessionID string) (string, time.T
 }
 
 // GenerateRefreshToken generates a refresh token for the given user.
-func (s *JWTMaker) CreateRefreshToken(u *user.User) (string, time.Time, time.Time, error) {
-	refreshTokenClaims := newRefreshClaims(u, s.issuer, s.refreshDuration)
+func (s *JWTMaker) CreateRefreshToken(userID string) (string, time.Time, time.Time, error) {
+	refreshTokenClaims := newRefreshClaims(userID, s.issuer, s.refreshDuration)
 
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshTokenClaims)
 	signedRefreshToken, err := refreshToken.SignedString([]byte(s.secretKey))
@@ -63,7 +61,7 @@ func (s *JWTMaker) CreateRefreshToken(u *user.User) (string, time.Time, time.Tim
 	if !ok {
 		return "", time.Time{}, time.Time{}, fmt.Errorf("error extracting claims from refresh token")
 	}
-	slog.Debug("refresh token generated successfully", "user_id", u.ID.String(), "expires_at", refreshTokenClaims.ExpiresAt.Time)
+	slog.Debug("refresh token generated successfully", "user_id", userID, "expires_at", refreshTokenClaims.ExpiresAt.Time)
 
 	return signedRefreshToken, refreshTokenClaims.IssuedAt.Time, refreshTokenClaims.ExpiresAt.Time, nil
 }

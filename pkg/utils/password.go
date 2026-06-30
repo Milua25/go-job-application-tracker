@@ -7,8 +7,19 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"unicode"
 
+	"github.com/go-playground/validator/v10"
 	"golang.org/x/crypto/argon2"
+)
+
+const (
+	// Argon2 parameters
+	argon2Time    = 1
+	argon2Memory  = 64 * 1024 // 64 MB
+	argon2Threads = 4
+	argon2KeyLen  = 32
+	hashDelimiter = "$"
 )
 
 func HashPassword(password string) (string, error) {
@@ -17,14 +28,14 @@ func HashPassword(password string) (string, error) {
 		slog.Error("failed to generate salt", "error", err)
 		return "", fmt.Errorf("failed to generate salt: %w", err)
 	}
-	hash := argon2.IDKey([]byte(password), salt, 1, 64*1024, 4, 32)
+	hash := argon2.IDKey([]byte(password), salt, argon2Time, argon2Memory, argon2Threads, argon2KeyLen)
 	saltBase64 := base64.StdEncoding.EncodeToString(salt)
 	hashBase64 := base64.StdEncoding.EncodeToString(hash)
-	return hashBase64 + "." + saltBase64, nil
+	return hashBase64 + hashDelimiter + saltBase64, nil
 }
 
 func VerifyPassword(hashedPassword, password string) bool {
-	parts := strings.Split(hashedPassword, ".")
+	parts := strings.Split(hashedPassword, hashDelimiter)
 	if len(parts) != 2 {
 		slog.Error("invalid hashed password format")
 		return false
@@ -42,9 +53,27 @@ func VerifyPassword(hashedPassword, password string) bool {
 		return false
 	}
 
-	computedHash := argon2.IDKey([]byte(password), salt, 1, 64*1024, 4, 32)
+	computedHash := argon2.IDKey([]byte(password), salt, argon2Time, argon2Memory, argon2Threads, argon2KeyLen)
 	if len(computedHash) != len(hash) {
 		return false
 	}
 	return subtle.ConstantTimeCompare(computedHash, hash) == 1
+}
+
+func StrongPassword(fl validator.FieldLevel) bool {
+	password := fl.Field().String()
+	var hasUpper, hasLower, hasNumber, hasSpecial bool
+	for _, char := range password {
+		switch {
+		case unicode.IsUpper(char):
+			hasUpper = true
+		case unicode.IsLower(char):
+			hasLower = true
+		case unicode.IsDigit(char):
+			hasNumber = true
+		case unicode.IsPunct(char) || unicode.IsSymbol(char):
+			hasSpecial = true
+		}
+	}
+	return hasUpper && hasLower && hasNumber && hasSpecial
 }

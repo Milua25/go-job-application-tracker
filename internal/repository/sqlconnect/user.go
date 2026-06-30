@@ -108,3 +108,15 @@ func (s *UserStore) FindAllWithSessions(ctx context.Context) ([]*user.User, erro
 	}
 	return users, nil
 }
+
+// func (s *UserStore) DeleteSessionsByUserID(ctx context.Context, userID string) error {
+// 	slog.Debug("deleting sessions for user", "user_id", userID)
+// 	return withTx(s.db, func(tx *gorm.DB) error {
+// 		if err := tx.WithContext(ctx).Where("user_id = ?", userID).Delete(&user.Session{}).Error; err != nil {
+// 			slog.Error("failed to delete sessions for user", "user_id", userID, "error", err)
+// 			return err
+// 		}
+// 		slog.Debug("sessions deleted successfully for user", "user_id", userID)
+// 		return nil
+// 	}, &sql.TxOptions{})
+// }

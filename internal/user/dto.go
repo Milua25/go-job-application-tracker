@@ -64,6 +64,10 @@ type UpdateUserRequest struct {
 	IsActive  *bool   `json:"is_active,omitempty"`
 }
 
+type UpdateUserRoleRequest struct {
+	IsAdmin bool `json:"is_admin"`
+}
+
 // func fromTimePtr(t *time.Time) *time.Time {
 // 	if t == nil || t.IsZero() {
 // 		return nil

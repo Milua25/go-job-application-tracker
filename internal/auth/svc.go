@@ -72,6 +72,12 @@ func (h *authService) loginUser(ctx context.Context, req LoginRequest) (*user.Us
 		return nil, "", time.Time{}, "", time.Time{}, err
 	}
 
+	// Check if the user is active
+	if !foundUser.IsActive {
+		slog.Warn("inactive user attempted to log in", "email", req.Email)
+		return nil, "", time.Time{}, "", time.Time{}, ErrInactiveUser
+	}
+
 	if !utils.VerifyPassword(foundUser.PasswordHash, req.Password) {
 		slog.Warn("authentication failed", "email", req.Email)
 		return nil, "", time.Time{}, "", time.Time{}, ErrInvalidCredentials
@@ -79,13 +85,13 @@ func (h *authService) loginUser(ctx context.Context, req LoginRequest) (*user.Us
 
 	sessionID := uuid.New()
 
-	accessToken, accessTokenExpiresAt, err := h.tokenMaker.GenerateToken(foundUser, sessionID.String())
+	accessToken, accessTokenExpiresAt, err := h.tokenMaker.GenerateToken(foundUser.ID.String(), foundUser.Email, foundUser.FirstName, foundUser.LastName, foundUser.IsAdmin, sessionID.String())
 	if err != nil {
 		slog.Error("failed to generate token", "email", foundUser.Email, "error", err)
 		return nil, "", time.Time{}, "", time.Time{}, err
 	}
 
-	refreshToken, refreshTokenIssuedAt, refreshTokenExpiresAt, err := h.tokenMaker.CreateRefreshToken(foundUser)
+	refreshToken, refreshTokenIssuedAt, refreshTokenExpiresAt, err := h.tokenMaker.CreateRefreshToken(foundUser.ID.String())
 	if err != nil {
 		slog.Error("failed to generate refresh token", "email", foundUser.Email, "error", err)
 		return nil, "", time.Time{}, "", time.Time{}, ErrTokenCreationFailed
@@ -135,7 +141,7 @@ func (h *authService) RefreshAccessToken(ctx context.Context, req RefreshTokenRe
 		return "", time.Time{}, err
 	}
 
-	accessToken, accessTokenExpiresAt, err := h.tokenMaker.GenerateToken(foundUser, retrievedSess.ID.String())
+	accessToken, accessTokenExpiresAt, err := h.tokenMaker.GenerateToken(foundUser.ID.String(), foundUser.Email, foundUser.FirstName, foundUser.LastName, foundUser.IsAdmin, retrievedSess.ID.String())
 	if err != nil {
 		slog.Error("failed to generate access token", "email", foundUser.Email, "error", err)
 		return "", time.Time{}, err

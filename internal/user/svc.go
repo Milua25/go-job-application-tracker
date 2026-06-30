@@ -9,11 +9,12 @@ import (
 )
 
 type userService struct {
-	store Repository
+	store          Repository
+	sessionRevoker SessionRevoker
 }
 
-func newUserService(store Repository) *userService {
-	return &userService{store: store}
+func newUserService(store Repository, sessionRevoker SessionRevoker) *userService {
+	return &userService{store: store, sessionRevoker: sessionRevoker}
 }
 
 func (s *userService) getAll(ctx context.Context) ([]*User, error) {
@@ -95,4 +96,34 @@ func (s *userService) createUser(ctx context.Context, req CreateUserRequest) (*U
 
 func (s *userService) findAllWithSessions(ctx context.Context) ([]*User, error) {
 	return s.store.FindAllWithSessions(ctx)
+}
+
+func (s *userService) updateUserRole(ctx context.Context, userID string, req UpdateUserRoleRequest) error {
+	u, err := s.store.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	u.IsAdmin = req.IsAdmin
+
+	if err := s.store.Update(ctx, u); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *userService) deactivateUser(ctx context.Context, id string) error {
+	inactive := false
+	if _, err := s.updateByID(ctx, id, UpdateUserRequest{IsActive: &inactive}); err != nil {
+		return err
+	}
+	return s.revokeUserSessions(ctx, id)
+}
+
+func (s *userService) revokeUserSessions(ctx context.Context, userID string) error {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return err
+	}
+	return s.sessionRevoker.DeleteSessionsByUserID(ctx, uid)
 }

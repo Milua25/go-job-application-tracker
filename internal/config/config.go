@@ -12,11 +12,12 @@ import (
 const minSecretLength = 32
 
 type Config struct {
-	Server   ServerConfig
-	DB       DbConfig
-	JWT      JWTConfig
-	Security SecurityConfig
-	Admin    AdminConfig
+	Server    ServerConfig
+	DB        DbConfig
+	JWT       JWTConfig
+	Security  SecurityConfig
+	Admin     AdminConfig
+	RateLimit RateLimitConfig
 }
 
 type AdminConfig struct {
@@ -56,6 +57,11 @@ type JWTConfig struct {
 	ExpiresIn        string
 	RefreshExpiresIn string
 	Issuer           string
+}
+
+type RateLimitConfig struct {
+	Limit int
+	Reset time.Duration
 }
 
 func getEnv(key, defaultValue string) string {
@@ -152,6 +158,10 @@ func LoadConfig() (*Config, error) {
 		Admin: AdminConfig{
 			Email:    getEnv("ADMIN_EMAIL", "admin@example.com"),
 			Password: getEnv("ADMIN_PASSWORD", "adminpassword"),
+		},
+		RateLimit: RateLimitConfig{
+			Limit: getEnvAsInt("RATE_LIMIT", 10),
+			Reset: getEnvAsDuration("RATE_LIMIT_RESET", time.Minute),
 		},
 	}
 	return cfg, nil

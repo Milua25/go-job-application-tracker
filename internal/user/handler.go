@@ -13,19 +13,17 @@ type UserHandler struct {
 	svc *userService
 }
 
-func NewUserHandler(store Repository) *UserHandler {
-	return &UserHandler{svc: newUserService(store)}
+func NewUserHandler(store Repository, sessionRevoker SessionRevoker) *UserHandler {
+	return &UserHandler{svc: newUserService(store, sessionRevoker)}
 }
 
 func (h *UserHandler) RegisterRoutes(r gin.IRouter, authMiddleware, adminMiddleware gin.HandlerFunc) {
-	g := r.Group("/users", authMiddleware)
-	g.GET("/:id", h.GetUserByID)
-	g.PATCH("/:id", h.UpdateUser)
-
 	// Admin-only routes
-	admin := g.Group("", adminMiddleware)
+	admin := r.Group("/users", authMiddleware, adminMiddleware)
 	admin.GET("", h.GetAllUsers)
+	admin.GET("/:id", h.GetUserByID)
 	admin.POST("", h.CreateUser)
+	admin.PATCH("/:id", h.UpdateUser)
 	admin.POST("/:id/*action", h.DeactivateReactivateUser)
 	admin.DELETE("/:id", h.DeleteUser)
 	admin.GET("/sessions", h.FindAllLoginUsers)
@@ -160,21 +158,25 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 }
 
 func (h *UserHandler) DeactivateReactivateUser(c *gin.Context) {
+	// Get the user ID and action from the URL parameters
 	id := c.Param("id")
 	action := c.Param("action") // Remove the leading slash from the action
 	if len(action) < 2 {
-		render.BadRequestError(c, "invalid action", errors.New("action must be 'deactivate' or 'reactivate'"))
+		render.BadRequestError(c, "invalid action", errors.New("action must be 'deactivate' or 'reactivate' or 'role'"))
 		return
 	}
+
 	action = action[1:] // Remove the leading slash from the action
 	isActive := true
+
 	if _, err := uuid.Parse(id); err != nil {
 		render.BadRequestError(c, "invalid user id", err)
 		return
 	}
-	if action != "deactivate" && action != "reactivate" {
+
+	if action != "deactivate" && action != "reactivate" && action != "role" {
 		slog.Info("invalid action for user", "user_id", id, "action", action)
-		render.BadRequestError(c, "invalid action", errors.New("action must be 'deactivate' or 'reactivate'"))
+		render.BadRequestError(c, "invalid action", errors.New("action must be 'deactivate', 'reactivate' or 'role'"))
 		return
 	}
 
@@ -182,15 +184,51 @@ func (h *UserHandler) DeactivateReactivateUser(c *gin.Context) {
 		isActive = false
 	}
 
-	if _, err := h.svc.updateByID(c.Request.Context(), id, UpdateUserRequest{IsActive: &isActive}); err != nil {
-		slog.Error("failed to update user", "user_id", id, "error", err)
-		if errors.Is(err, ErrNotFound) {
-			render.NotFoundError(c, "user not found", err)
+	if action == "role" {
+		var req UpdateUserRoleRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			render.ValidationError(c, err)
 			return
 		}
-		render.InternalServerError(c, "failed to update user", err)
+		if err := h.svc.updateUserRole(c.Request.Context(), id, req); err != nil {
+			slog.Error("failed to update user role", "user_id", id, "error", err)
+			if errors.Is(err, ErrNotFound) {
+				render.NotFoundError(c, "user not found", err)
+				return
+			}
+			render.InternalServerError(c, "failed to update user role", err)
+			return
+		}
+		slog.Info("user role updated successfully", "user_id", id)
+		render.OK(c, gin.H{
+			"message": "user role updated successfully",
+		})
 		return
 	}
+
+	if action == "deactivate" {
+		if err := h.svc.deactivateUser(c.Request.Context(), id); err != nil {
+			slog.Error("failed to deactivate user", "user_id", id, "error", err)
+			if errors.Is(err, ErrNotFound) {
+				render.NotFoundError(c, "user not found", err)
+				return
+			}
+			render.InternalServerError(c, "failed to deactivate user", err)
+			return
+		}
+	} else {
+		if _, err := h.svc.updateByID(c.Request.Context(), id, UpdateUserRequest{IsActive: &isActive}); err != nil {
+			slog.Error("failed to reactivate user", "user_id", id, "error", err)
+			if errors.Is(err, ErrNotFound) {
+				render.NotFoundError(c, "user not found", err)
+				return
+			}
+			render.InternalServerError(c, "failed to reactivate user", err)
+			return
+		}
+	}
+
+	// Log the action and return a success response
 	slog.Info("user "+action+"d"+" successfully", "user_id", id)
 	render.OK(c, gin.H{
 		"message": "user " + action + "d" + " successfully",

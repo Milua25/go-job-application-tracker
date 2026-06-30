@@ -1,8 +1,7 @@
 package middleware
 
 import (
-	"log"
-	"net/http"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -23,11 +22,11 @@ type clientInfo struct {
 	lastSeen time.Time
 }
 
-func NewRateLimiter(limit int) *RateLimiter {
+func NewRateLimiter(limit int, reset time.Duration) *RateLimiter {
 	r1 := &RateLimiter{
 		clients: make(map[string]*clientInfo),
 		limit:   limit,
-		reset:   time.Minute,
+		reset:   reset,
 	}
 	go r1.cleanupIP()
 	return r1
@@ -52,7 +51,7 @@ func (rl *RateLimiter) cleanupIP() {
 func (rl *RateLimiter) Limit() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		clientIP := c.ClientIP()
-		log.Printf("Client IP: %s", clientIP)
+		slog.Info("Client IP", "ip", clientIP)
 
 		rl.mu.Lock()
 
@@ -68,7 +67,7 @@ func (rl *RateLimiter) Limit() gin.HandlerFunc {
 		rl.mu.Unlock() // Unlock before checking the limiter
 
 		if !limiter.Allow() {
-			render.JSONError(c, http.StatusTooManyRequests, "RATE_LIMIT_EXCEEDED", "rate limit exceeded")
+			render.RateLimitExceededResponse(c, "rate limit exceeded")
 			return
 		}
 

@@ -3,6 +3,7 @@ package user
 import (
 	"time"
 
+	"github.com/Milua25/go-job-application-tracker/internal/token"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -20,6 +21,6 @@ type User struct {
 	CreatedAt       time.Time
 	LastLoginAt     *time.Time
 	UpdatedAt       time.Time
-	DeletedAt       gorm.DeletedAt `gorm:"index"`
-	// Sessions        []token.Session `gorm:"foreignKey:UserID"`
+	DeletedAt       gorm.DeletedAt  `gorm:"index"`
+	Sessions        []token.Session `gorm:"foreignKey:UserID"`
 }

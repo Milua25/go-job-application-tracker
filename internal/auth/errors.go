@@ -11,4 +11,5 @@ var (
 	ErrInvalidRefreshToken   = errors.New("invalid refresh token")
 	ErrFailedToDeleteSession = errors.New("failed to delete sessions")
 	ErrFailedToRevokeSession = errors.New("failed to revoke session")
+	ErrInactiveUser          = errors.New("user account is inactive")
 )

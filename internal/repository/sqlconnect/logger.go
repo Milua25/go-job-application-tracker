@@ -15,6 +15,7 @@ type slogGORMLogger struct {
 	slowThreshold time.Duration
 }
 
+// newSlogGORMLogger creates a new slogGORMLogger that implements the gorm/logger.Interface.
 func newSlogGORMLogger(log *slog.Logger, level logger.LogLevel, slowThreshold time.Duration) logger.Interface {
 	return &slogGORMLogger{
 		log:           log,

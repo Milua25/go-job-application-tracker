@@ -19,7 +19,10 @@ import (
 	"github.com/Milua25/go-job-application-tracker/internal/routers"
 	"github.com/Milua25/go-job-application-tracker/internal/token"
 	"github.com/Milua25/go-job-application-tracker/internal/user"
+	"github.com/Milua25/go-job-application-tracker/pkg/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 )
 
 type app struct {
@@ -30,6 +33,13 @@ type app struct {
 }
 
 func (a *app) run() error {
+	// register custom validation for strong password
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		if err := v.RegisterValidation("strong_password", utils.StrongPassword); err != nil {
+			return fmt.Errorf("failed to register strong password validation: %w", err)
+		}
+	}
+
 	tokenMaker, err := token.NewJWTMaker(
 		a.cfg.JWT.SecretKey,
 		a.cfg.JWT.Issuer,
@@ -41,7 +51,7 @@ func (a *app) run() error {
 		return fmt.Errorf("invalid JWT config: %w", err)
 	}
 
-	userHandler := user.NewUserHandler(a.pgStore.User)
+	userHandler := user.NewUserHandler(a.pgStore.User, a.pgStore.Session)
 	healthcheckHandler := healthcheck.NewHealthCheckHandler(a.sqlDB)
 	authHandler := auth.NewAuthHandler(a.pgStore.User, a.pgStore.Session, tokenMaker)
 

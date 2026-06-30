@@ -69,26 +69,4 @@ func withTx(db *gorm.DB, fn func(tx *gorm.DB) error, opts *sql.TxOptions) error 
 		return err
 	}
 	return nil
-
-	// tx := db.Begin()
-	// if tx.Error != nil {
-	// 	return tx.Error
-	// }
-
-	// defer func() {
-	// 	if r := recover(); r != nil {
-	// 		tx.Rollback()
-	// 	}
-	// }()
-
-	// if err := fn(tx); err != nil {
-	// 	tx.Rollback()
-	// 	return err
-	// }
-
-	// if err := tx.Commit().Error; err != nil {
-	// 	tx.Rollback()
-	// 	return err
-	// }
-
 }

@@ -3,7 +3,6 @@ package token
 import (
 	"time"
 
-	"github.com/Milua25/go-job-application-tracker/internal/user"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -17,14 +16,14 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func newUserClaims(user *user.User, sessionID, issuer string, expireDuration time.Duration) *Claims {
+func newUserClaims(userID, email, firstName, lastName string, isAdmin bool, sessionID, issuer string, expireDuration time.Duration) *Claims {
 	now := time.Now()
 	return &Claims{
-		Email:     user.Email,
-		FirstName: user.FirstName,
-		LastName:  user.LastName,
-		Uid:       user.ID.String(),
-		IsAdmin:   user.IsAdmin,
+		Email:     email,
+		FirstName: firstName,
+		LastName:  lastName,
+		Uid:       userID,
+		IsAdmin:   isAdmin,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Audience:  jwt.ClaimStrings{"access"},
 			ExpiresAt: jwt.NewNumericDate(now.Add(expireDuration)),
@@ -35,10 +34,10 @@ func newUserClaims(user *user.User, sessionID, issuer string, expireDuration tim
 	}
 }
 
-func newRefreshClaims(user *user.User, issuer string, expireDuration time.Duration) *Claims {
+func newRefreshClaims(userID, issuer string, expireDuration time.Duration) *Claims {
 	now := time.Now()
 	return &Claims{
-		Uid: user.ID.String(),
+		Uid: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Audience:  jwt.ClaimStrings{"refresh"},
 			ExpiresAt: jwt.NewNumericDate(now.Add(expireDuration)),
