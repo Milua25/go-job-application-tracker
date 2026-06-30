@@ -12,7 +12,15 @@ func RequestIDMiddleware() gin.HandlerFunc {
 			requestID = uuid.New().String()
 		}
 		c.Set("request_id", requestID)
+
+		correlationID := c.GetHeader("X-Correlation-ID")
+		if correlationID == "" {
+			correlationID = requestID
+		}
+		c.Set("correlation_id", correlationID)
+
 		c.Header("X-Request-ID", requestID)
+		c.Header("X-Correlation-ID", correlationID)
 		c.Next()
 	}
 }

@@ -60,7 +60,7 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 	u, err := h.svc.getByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			render.NotFoundError(c, "user not found")
+			render.NotFoundError(c, "user not found", err)
 			return
 		}
 		slog.Error("failed to fetch user by id", "user_id", id, "error", err)
@@ -85,7 +85,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 
 	if err := h.svc.deleteByID(c.Request.Context(), id); err != nil {
 		if errors.Is(err, ErrNotFound) {
-			render.NotFoundError(c, "user not found")
+			render.NotFoundError(c, "user not found", err)
 			return
 		}
 		slog.Error("failed to delete user", "user_id", id, "error", err)
@@ -115,7 +115,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrNotFound):
-			render.NotFoundError(c, "user not found")
+			render.NotFoundError(c, "user not found", err)
 		case errors.Is(err, ErrEmailInUse):
 			render.ConflictResponseError(c, "email already in use", err)
 		default:
@@ -185,7 +185,7 @@ func (h *UserHandler) DeactivateReactivateUser(c *gin.Context) {
 	if _, err := h.svc.updateByID(c.Request.Context(), id, UpdateUserRequest{IsActive: &isActive}); err != nil {
 		slog.Error("failed to update user", "user_id", id, "error", err)
 		if errors.Is(err, ErrNotFound) {
-			render.NotFoundError(c, "user not found")
+			render.NotFoundError(c, "user not found", err)
 			return
 		}
 		render.InternalServerError(c, "failed to update user", err)

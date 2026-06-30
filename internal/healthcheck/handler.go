@@ -17,8 +17,8 @@ func NewHealthCheckHandler(db *sql.DB) *HealthCheckHandler {
 }
 
 func (h *HealthCheckHandler) RegisterRoutes(r gin.IRouter) {
-	g := r.Group("/health")
-	g.GET("", h.CheckHealth)
+	g := r.Group("/")
+	g.GET("/health", h.CheckHealth)
 	g.GET("/ping", h.Ping)
 }
 

@@ -23,6 +23,8 @@ func SlogMiddleware(logger *slog.Logger) gin.HandlerFunc {
 			slog.Duration("latency", time.Since(start)),
 			slog.String("client_ip", c.ClientIP()),
 			slog.Int("body_size", c.Writer.Size()),
+			slog.String("request_id", c.GetString("request_id")),
+			slog.String("correlation_id", c.GetString("correlation_id")),
 		)
 
 		if len(c.Errors) > 0 {
